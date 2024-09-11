@@ -3,6 +3,7 @@ from io import StringIO
 
 from sqlalchemy import select, String, cast
 from sqlalchemy.orm import joinedload, subqueryload
+from fastapi import Request
 from fastapi.responses import FileResponse, ORJSONResponse, StreamingResponse
 
 from .. import Session, hashfs
@@ -10,7 +11,8 @@ from ..app import NotFound, Forbidden, BadRequest
 from ..auth import user_with_coll_permission_t_dep
 from ..models import Document, UriEquiv, Analysis, Fragment, Statement
 from ..uri import normalize
-from ..pyd_models import DocumentModel, FragmentModel, AnalysisModel
+from ..utils import safe_lang_detect
+from ..pyd_models import DocumentModel, FragmentModel, AnalysisModel, fragment_type
 from ..task_registry import TaskRegistry
 from . import api_router, get_collection
 
@@ -229,6 +231,60 @@ async def add_doc(
         await session.commit()
         document = doc.as_model(session)
     location = f"/api/c/{collection}/document/{doc.id}"
+    return ORJSONResponse(
+        document.model_dump(mode="json"),
+        status_code=201,
+        headers=dict(location=location),
+    )
+
+
+@api_router.get("/document/{doc_id}/quotes/{fragment_id}")
+@api_router.get("/c/{collection}/document/{doc_id}/quotes/{fragment_id}")
+@api_router.get("/document/{doc_id}/paragraphs/{fragment_id}")
+@api_router.get("/c/{collection}/document/{doc_id}/paragraphs/{fragment_id}")
+async def get_document_fragment(
+    doc_id: int,
+    fragment_id: int,
+    current_user: user_with_coll_permission_t_dep("access"),
+    request: Request,
+    collection: Optional[str] = None,
+) -> FragmentModel:
+    async with Session() as session:
+        fragment = await session.get(Fragment, fragment_id)
+        if not fragment:
+            raise NotFound()
+        if fragment.doc_id != doc_id:
+            raise BadRequest("Fragment does not belong to this document")
+        if request.url.path.split('/')[-2] == 'quotes':
+            if fragment.scale != fragment_type.quote:
+                raise BadRequest("Not a quote")
+        elif fragment.scale not in (fragment_type.paragraph, fragment_type.sentence):
+            raise BadRequest("Not a paragraph")
+        return fragment.as_model(session)
+
+
+
+@api_router.post("/c/{collection}/document/{doc_id}/quotes", status_code=201)
+async def add_quote(
+    current_user: user_with_coll_permission_t_dep("add_document"),
+    collection: str,
+    doc_id: int,
+    quote: FragmentModel,
+) -> FragmentModel:
+    # TODO: Allow upload
+    async with Session() as session:
+        collection_ob = await get_collection(collection, session, current_user.id)
+        document = await get_document_object(session, doc_id, collection)
+        fragment = Fragment.from_model(quote)
+        fragment.scale = fragment_type.quote
+        fragment.document = document
+        if not fragment.language:
+            # Should we use the document.language?
+            fragment.language = safe_lang_detect(fragment.text)
+        # TODO: infer location of quote
+        session.add(fragment)
+        await session.commit()
+    location = f"/api/c/{collection}/document/{doc_id}/quotes/{fragment.id}"
     return ORJSONResponse(
         document.model_dump(mode="json"),
         status_code=201,
