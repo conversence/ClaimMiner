@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Analyses{% endblock %}
+{% block content %}
+<h1>Analyses of type {{analyzer.name}}
+{% if target %}for {{target.type.name}} {{target.id}}{%endif%}
+{%if collection %} in collection {{collection.name}}{%endif%}
+</h1>
+<div>
+<ol>
+{% for analysis in analyses %}
+<li>{{analysis.created}} <a href="{{analysis.web_path(collection)}}">{{analysis.id}} - {{analysis.status.name}}</a>
+{%if analysis.task_template_id %}
+using template <a href="{{analysis.task_template.web_path(collection)}}">{{analysis.task_template_id}}</a>
+{%endif%}
+<br/>
+<span style="font-size: small;">{{analysis.params}}</span>
+->
+<span style="font-size: small;">{{analysis.results}}</span>
+</li>
+{% endfor %}
+</ol>
+</div>
+{% endblock %}

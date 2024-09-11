@@ -1,0 +1,150 @@
+
+body {
+  background-color: $body-color;
+  color: $back-text-color;
+}
+
+nav {
+  background-color: $body-color;
+  color: $back-text-color;
+  font-family: $font-sans-serif;
+}
+
+footer {
+  font-family: $font-sans-serif;
+}
+
+footer a {
+  color: $back-text-color;
+}
+
+.bg-body-tertiary {
+  background-color: $body-color !important;
+  color: $back-text-color;
+}
+
+#content {
+  background-color: $body-bg;
+  margin-bottom: 1ex;
+  padding: 1em;
+  color: $text-color;
+  font-family: $font-serif;
+}
+
+a.disabled {
+  pointer-events: none;
+  cursor: default;
+  color: darkgrey;
+}
+
+span.boundary {
+  background-color: yellow;
+}
+
+span.key_point {
+  background-color: orange;
+}
+
+span.kp_variant {
+  background-color: #fc5;
+}
+
+.hidden {
+  display: none;
+}
+
+.dropdown-menu .nav-link {
+  color: $body-color;
+  &:hover {
+    color: $nav-link-hover-color;
+  }
+  &.active {
+    color: $nav-link-hover-color;
+  }
+}
+
+.navbar-brand {
+  padding: 0;
+  color: $back-text-color;
+}
+
+.brand-title {
+  text-decoration: underline $brand-underline;
+  text-underline-offset: 6px;
+  font-family: $font-logo;
+  font-size: xx-large;
+}
+
+#logo-spacer {
+  display: inline-block;
+}
+
+#logo {
+  background-image: $logo-image;
+  position: absolute;
+}
+
+// Logo size
+@media (max-width: 375px) {
+  #logo {
+    background-size: $logo-width-small;
+    width: $logo-width-small;
+    height: $logo-height-small;
+    margin: 0.6ex;
+  }
+  #logo-spacer {
+    width: $logo-width-small + 10px;
+  }
+}
+@media (min-width: 375px) {
+  #logo {
+    background-size: $logo-width;
+    width: $logo-width;
+    height: $logo-height;
+  }
+  #logo-spacer {
+    width: $logo-width + 14px;
+  }
+}
+
+
+
+@media (max-width: 650px) {
+  #content {
+    margin-top: $logo-height + 10px;
+    margin-left: 1em;
+    margin-right: 1em;
+    width: calc(100% - 2em);
+  }
+}
+
+@media (min-width: 650px) {
+  #content {
+    margin-top: 70px;
+  }
+}
+@media (min-width: 650px) and (max-width:1200px) {
+  #content {
+    margin-left: $logo-width + 15px;
+    margin-right: 6%;
+    width: calc(94% - 110px);
+  }
+}
+
+@media (min-width:1200px) {
+  #content {
+    margin-left: 10%;
+    margin-right: 10%;
+    width: 80%;
+  }
+}
+
+#neighbourhood {
+  margin-bottom: 1ex;
+  li::marker {
+    content: ''
+  }
+  ul {
+    margin-bottom: 0;
+  }
+}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Upload{% endblock %}
+{% block content %}
+<div>
+  {% if success_doc_id %}
+  <p>Document added <a href="{{collection.path}}/document/{{success_doc_id}}">here</a>.</p>
+  {% endif %}
+  <form hx-post="/f{{collection.path}}/document/upload" hx-target="#content" method="post" id="add_docs_single" enctype="multipart/form-data">
+    <h2>Upload a single document (PDF, Text or HTML)</h2>
+    <input hidden name="upload_type" value="single"/>
+    <p>
+      <label for="url">Give a URL as a file identifier</label>
+      <input type="url" name="url" required/>
+    </p>
+    <p>
+      <label for="file">Choose a file to upload</label>
+      <input type="file" name="file" accept="application/pdf,text/html,text/plain,text/markdown"/>
+    </p>
+    <button type="submit" value="Upload">Upload Document</button>
+  </form>
+  <form hx-post="/f{{collection.path}}/document/upload" hx-target="#content" id="add_docs_csv" enctype="multipart/form-data">
+    <h2>Upload a CSV with URLs of many documents</h2>
+    <input hidden name="upload_type" value="csv"/>
+    <p>
+      <label for="file">Choose CSV file to upload</label>
+      <input type="file" name="file" accept=".csv" required/>
+    </p>
+    <p>
+      <label for="column">Column number with the URL</label>
+      <input type="number" name="column" min="1" required/>
+    </p>
+    <p>
+      <label for="title_column">Column number with the document title (optional)</label>
+      <input type="number" name="title_column" min="1"/>
+    </p>
+    <p>
+      <label for="quote_column">Column number with a quote from the document (optional)</label>
+      <input type="number" name="quote_column" min="1"/>
+    </p>
+    <p>
+      <label for="skip">Skip first row</label>
+      <input type="checkbox" name="skip" checked/>
+    </p>
+    <button type="submit" value="Upload">Upload CSV</button>
+  </form>
+  <form hx-post="/f{{collection.path}}/document/upload" hx-target="#content" id="add_docs_jsonl" enctype="multipart/form-data">
+    <h2>Upload a JSONL with document content</h2>
+
+    <input hidden name="upload_type" value="jsonl"/>
+    <p>
+      <label for="file">Choose JSONL file to upload</label>
+      <input type="file" name="file" accept=".jsonl" required/>
+    </p>
+    <p>
+      <label for="url_spec">Name of fields with url <small>(comma-separated, 'literals', #slugify)</small></label>
+      <input type="text" name="url_spec" value="url" required/>
+    </p>
+    <p>
+      <label for="text_fields">Name of fields with text content</label>
+      <input type="text" name="text_fields" value="text" required/>
+    </p>
+    <p>
+      <input type="checkbox" name="use_title" checked/>
+      <label for="use_title">Do we use the title field</label> &bullet;
+      <input type="checkbox" name="use_publication" />
+      <label for="extra_newlines">Do we use the publication date</label> &bullet;
+      <input type="checkbox" name="extra_newlines" />
+      <label for="extra_newlines">Are there extra newlines that require cleanup</label>
+    </p>
+    <button type="submit" value="Upload">Upload CSV</button>
+  </form>
+</div>
+{% endblock %}

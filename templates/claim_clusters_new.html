@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Claim Clusters{% endblock %}
+{% block content %}
+<div>
+  <form hx-post="/f{{collection.path}}/analysis/cluster/new" hx-target="#content">
+    <div class="form-group">
+      <p>
+        <label for="eps">Epsilon</label>
+        <input type="number" id="eps" name="eps" value="{{eps}}" min=0 max=1 step="0.01" />
+      </p>
+      <p>
+        <label for="min_samples">Min samples</label>
+        <input type="number" id="min_samples" name="min_samples" value="{{min_samples}}">
+      </p>
+      <p>
+        <label for="model">Model:</label>
+        <select id="model" name="model">
+          {%for model_id in models %}
+          <option {% if model_id == model.name %}selected{% endif %} value="{{model_id}}">{{model_names[model_id]}}</option>
+          {% endfor %}
+        </select>
+      </p>
+    </div>
+    <button type="submit" name="recalc" class="btn btn-primary">Recalculate</button>
+    <button type="submit" name="save" class="btn">Save</button>
+  </form>
+  <p>{{clusters|length}} clusters, {{missing}} claims outside clusters</p>
+  <p>Sizes:
+    {% for cluster in clusters %}
+    <a href="#c{{loop.index}}">{{ cluster | length }}</a>
+    {% else %}
+      <p>No clusters</p>
+    {% endfor %}
+  </p>
+    {% for cluster in clusters %}
+    <h3 id="c{{loop.index}}">Cluster {{loop.index}}: {{ cluster | length }} claims</h3>
+        <ul>
+            {% for claim_id, txt in cluster %}
+            <li>
+                <a href="{{collection.path}}/claim/{{claim_id}}">{{txt}}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+      <p>No clusters</p>
+    {% endfor %}
+    </ol>
+</div>
+{%endblock%}

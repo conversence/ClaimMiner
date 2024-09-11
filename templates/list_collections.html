@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Collections{% endblock %}
+{% block content %}
+<div>
+  <h1>Collections</h1>
+  <ol>
+    {% for coll, num_docs, num_frags in data %}
+      <li>
+        <a href="/c/{{coll.name}}">{{coll.name}}</a> (<a href="/c/{{coll.name}}/document">{{num_docs}} documents</a>, <a href="/c/{{coll.name}}/claim">{{num_frags}} claims</a>)
+      </li>
+      {% else %}
+      <li>No collection yet</li>
+    {% endfor %}
+  </ol>
+</div>
+{% if user_can('admin') %}
+<form hx-post="/f/c" hx-target="#content">
+  <h3>Add collection</h3>
+  <label for="name">Name:</label>
+  <input type="text" name="name" id="name">
+  <input type="submit"/>
+</form>
+{%endif%}
+
+{% endblock %}

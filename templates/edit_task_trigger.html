@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}
+{%if trigger.id %}
+Trigger {{trigger.id}}
+{%else%}
+New trigger
+{%endif%}
+{% endblock %}
+{% block script_content %}
+
+function set_analyzer_type() {
+  if (document.getElementById('task_based').checked) {
+    document.getElementById('task_based_trigger_params').style.display = 'block';
+    document.getElementById('topic_based_trigger_params').style.display = 'none';
+  } else {
+    document.getElementById('task_based_trigger_params').style.display = 'none';
+    document.getElementById('topic_based_trigger_params').style.display = 'block';
+  }
+}
+
+const task_templates_by_analyzer = {{task_templates_by_analyzer | tojson}};
+const base_trigger_task_template = {{trigger.task_template_id|tojson}};
+
+function prepare_task_templates() {
+  const analyzer_id = document.getElementById('target_analyzer_id').value;
+  const task_template_id = document.getElementById('task_template_id');
+  task_template_id.innerHTML = '';
+  if (task_templates_by_analyzer[analyzer_id] != undefined) {
+    document.getElementById('task_templates_params').style.display = 'block';
+
+    for (const kv_pair of Object.entries(task_templates_by_analyzer[analyzer_id])) {
+      const [id, nickname] = kv_pair;
+      task_template_id.innerHTML += `<option value="${id}" ${(id==base_trigger_task_template)?'selected':''}>${nickname}</option>`;
+    }
+  } else {
+    document.getElementById('task_templates_params').style.display = 'none';
+  }
+}
+
+function loaded() {
+  setPagination('', '', false);
+  set_analyzer_type();
+  prepare_task_templates();
+}
+function onPaginate(direction) {}
+
+function onsubmit() {
+  if (document.getElementById('task_based').checked) {
+    document.getElementById('creation_trigger_id').value = null;
+  } else {
+    document.getElementById('analyzer_trigger_id').value = null;
+  }
+  return true;
+}
+
+{% endblock %}
+
+{% block content %}
+<h1>
+{%if trigger.id %}
+Trigger {{trigger.id}}
+{%else%}
+New trigger
+{%endif%}
+</h1>
+<div>
+  <form onsubmit="onsubmit()" hx-post="/f{{collection.path}}/task_trigger/{{trigger.id if trigger.id else 'new'}}" hx-target="#content">
+    <fieldset>
+      <label for="trigger_type">Triggered by:</label>
+        <input type="radio" id="task_based" name="trigger_type" value="task_based" {% if trigger.analyzer_trigger_id %}checked{% endif %} onchange="set_analyzer_type()" />
+        <label for="task_based">task end</label>
+        <input type="radio" id="topic_based" name="trigger_type" value="topic_based" {% if trigger.creation_trigger_id %}checked{% endif %} onchange="set_analyzer_type()" />
+        <label for="topic_based">topic creation</label>
+    </fieldset>
+    <p id="task_based_trigger_params">
+      <label for="analyzer_trigger_id">Ending task:</label>
+      <select id="analyzer_trigger_id" name="analyzer_trigger_id">
+        {% for id, name in analyzers.items() %}
+        <option value="{{id}}" {% if trigger.analyzer_trigger_id == id %}selected{% endif %}>{{name}}</option>
+        {% endfor %}
+      </select>
+    </p>
+    <p id="topic_based_trigger_params">
+      <label for="creation_trigger_id">Topic created:</label>
+      <select id="creation_trigger_id" name="creation_trigger_id">
+        {% for ttype in topic_type %}
+        <option value="{{ttype.name}}" {% if trigger.creation_trigger_id == ttype %}selected{% endif %}>{{ttype.name}}</option>
+        {% endfor %}
+      </select>
+    </p>
+    <p>
+      <input type="checkbox" id="automatic" name="automatic" {% if trigger.automatic %}checked{% endif %} />
+      <label for="automatic">Automatic</label>
+    </p>
+    <label for="conditions">Conditions:</label><br/>
+    <textarea type="text" name="conditions" id="conditions">{{trigger.conditions| tojson}}</textarea>
+
+
+    <p>
+      Outcome:
+    </p>
+    <p>
+      <label for="target_analyzer_id">Target analyzer:</label>
+      <select id="target_analyzer_id" name="target_analyzer_id" onchange="prepare_task_templates()">
+        {% for id, name in analyzers.items() %}
+        <option value="{{id}}" {% if trigger.target_analyzer_id == id %}selected{% endif %}>{{name}}</option>
+        {% endfor %}
+      </select>
+    </p>
+    <p id="task_templates_params">
+      <label for="task_template_id">Task template:</label>
+      <select id="task_template_id" name="task_template_id">
+      </select>
+    </p>
+
+    <label for="params">Parameters:</label><br/>
+    <textarea type="text" name="params" id="params">{{trigger.params| tojson}}</textarea>
+
+    <p>
+      <input type="checkbox" id="delete_trigger" name="delete_trigger"/>
+      <label for="delete_trigger">Delete trigger</label>
+    </p>
+  <p>
+    <input type="submit" value="submit" value="Change" />
+  </p>
+  </form>
+  <span style="font-size:small"><a href=".">all triggers</a></span>
+</div>
+{% endblock %}

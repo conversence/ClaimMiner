@@ -1,0 +1,31 @@
+{% extends "edit_template.html" %}
+{% block template_form %}
+{% if can_edit %}
+  <p>
+    <label for="model">Model:</label>
+    <select name="model">
+      {% for model_id, model_name in model_names.items() %}
+      <option {%if template.model == model_id %}selected{%endif%} value="{{model_id}}">{{model_name}}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <p>
+    <label for="min_rank">Minimum rank:</label>
+    <input name="min_rank" type="number" value="{{template.min_rank or 0.85}}" min=0 max=1 step="0.01" default="0.85"/>
+  </p>
+  <p>
+    <label for="limit">Limit number of quotes:</label>
+    <input name="limit" type="number" value="{{template.limit or 4}}" min=1 max=10 default="4"/>
+  </p>
+{% else %}
+  <p>
+    <label for="model">Model:</label> {{model_name}}
+  </p>
+  <p>
+    <label for="min_rank">Minimum rank:</label> {{template.min_rank}}
+  </p>
+  <p>
+    <label for="limit">Limit number of quotes:</label>{{template.limit or ''}}
+  </p>
+{% endif %}
+{% endblock %}

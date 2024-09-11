@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Document{% endblock %}
+{% block content %}
+<div>
+  <h1>Links in {{doc.title or doc.url}}</h1>
+  <span style="font-size:small"><a href=".">document</a></span>
+  <ul>
+  {% for link in links %}
+  <li>
+  <a href="{{link}}" target="_blank">{{link}}</a>
+  {% if link in existing %}
+    <a href="{{collection.path}}/document/{{existing[link][1].id}}">downloaded</a>
+  {% else %}
+  <form hx-post="/f{{collection.path}}/document/upload" style="display: inline;" hx-target="#content">
+    <input hidden name="upload_type" value="single"/>
+    <input hidden name="url" value="{{link}}"/>
+    <button type="submit" value="Upload">Add</button>
+  </form>
+  {% endif %}
+  </li>
+  {%endfor%}
+  </ul>
+{% endblock %}

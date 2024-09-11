@@ -1,0 +1,55 @@
+{% extends "edit_template.html" %}
+{% block template_form %}
+{% if can_edit %}
+  <p>
+    <label for="prompt">Prompt text:</label>
+    <textarea style="width:80%" name="prompt" id="prompt">{{template.prompt}}</textarea>
+  </p>
+  <p>
+    {{ macros.link_form_elements(template.node_type, template.link_type.name, template.backwards_link) }}
+  </p>
+  <p>
+    <input type="checkbox" name="use_fragments" id="use_fragments" disabled
+    {% if analyzer.name == 'fragment_prompt_analyzer' %}checked{% endif %}
+    > <label for="use_fragments">Include fragments</label>
+  </p>
+  <p>
+    <label for="parser">Parser:</label>
+    <select name="parser">
+      <option {% if template.parser == 'single_phrase' %}selected{% endif %} value="single_phrase">Single phrase</option>
+      <option {% if template.parser == 'bullet_list' %}selected{% endif %} value="bullet_list">Bullet list</option>
+      <option {% if template.parser == 'bullet_list_with_refs' %}selected{% endif %} value="bullet_list_with_refs">Bullet list with source ids</option>
+    </select>
+  </p>
+
+  <p>
+    <label for="model">Model:</label>
+    <select name="model">
+      {% for model_id, model_name in models.items() %}
+      <option {%if template.model == model_name %}selected{%endif%} value="{{model_name}}">{{model_name}}</option>
+      {% endfor %}
+    </select>
+  </p>
+{% else %}
+  <p>
+    <label for="prompt">Prompt text:</label>
+    <code>{{template.prompt}}</code>
+  </p>
+  <p>
+  <i>-{{template.link_type}}→</i> {{fragment_type_names[template.node_type]}}
+  </p>
+  <p>
+    <input type="checkbox" name="use_fragments" id="use_fragments" disabled
+    {% if analyzer.name == 'fragment_prompt_analyzer' %}checked{% endif %}
+    > <label for="use_fragments">Include fragments</label>
+  </p>
+  <p>
+    <label for="parser">Parser:</label>{{template.parser}}
+  </p>
+
+  <p>
+    <label for="model">Model:</label> {{template.model.value}}
+  </p>
+
+{% endif %}
+{% endblock %}

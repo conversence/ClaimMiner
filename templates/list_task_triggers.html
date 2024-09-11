@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Task Triggers{% endblock %}
+{% block content %}
+<div>
+  {% if collection.path %}
+  <h1>Triggers for collection {{collection.name}}</h1>
+  {%else%}
+  <h1>Global triggers</h1>
+  {% endif %}
+    <ul>
+    {% for trigger in triggers %}
+      <li>
+        <a href="{{trigger.web_path(collection)}}">{{trigger.id}}</a>
+        {%if trigger.creation_trigger_id %}
+        When a <code>{{trigger.creation_trigger_id.name}}</code> is created
+        {%else%}
+        When task <code>{{trigger.analyzer_trigger.name}}</code> ends
+        {%endif%}
+        {%if trigger.conditions %} and conditions {{trigger.conditions|tojson}}{%endif%}
+        , run <code>{{trigger.target_analyzer.name}}</code>
+        {%if trigger.task_template%} with template
+        {%if 'prompt' in trigger.target_analyzer.name %}
+        <a href="{{trigger.task_template.web_path(collection)}}">{{trigger.task_template.nickname}}</a>
+        {%else%}
+        <code>{{trigger.task_template.nickname}}</code>
+        {%endif%}
+        {%endif%}
+        {%if trigger.automatic%}automatically{%endif%}
+        {%if trigger.params %}with parameters: <br/><code>{{trigger.params|tojson}}</code>{%endif%}
+      </li>
+    {% else %}
+      <li>No trigger yet</li>
+    {% endfor %}
+  </ul>
+  <p>
+    <a href="{{collection.path}}/task_trigger/new">New trigger</a>
+  </p>
+  <p style="font-size: small">
+  <a href="{{collection.path}}/task_trigger/map">Trigger map</a>
+  </p>
+  {% if collection %}
+  <p style="font-size: small">
+  <a href="/task_trigger">Global triggers</a>
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Collections{% endblock %}
+{% block script_content %}
+function loaded() {
+  setPagination(null, null, false);
+}
+function onPaginate(direction) {}
+{% endblock %}
+{% block content %}
+<div>
+  <h1>Edit Collection <em>{{collection.name}}</em></h1>
+  <a href="/c/{{collection.name}}/document">{{num_docs}} documents</a>, <a href="/c/{{collection.name}}/claim">{{num_frags}} claims</a>
+</div>
+{% if user_can('admin') %}
+<form name="edit" hx-post="/f{{collection.path}}/edit" hx-target="#content">
+  <p>Active Embeddings:
+  {% for model, name in model_names.items() %}
+  {% if not loop.first %}|{%endif%}
+  <input type="checkbox" name="{{model}}" id="{{model}}"
+  {% if model =='all_minilm_l6_v2' %}
+  checked disabled
+  {% elif model in collection.params.get('embeddings', []) %}
+  checked
+  {% endif %}
+  /><label for="{{model}}">&nbsp;{{name}}</label>
+  {%endfor%}
+  </p>
+  <br/>
+  <input type="submit"/>
+</form>
+{% endif %}
+{% endblock %}

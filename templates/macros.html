@@ -1,0 +1,159 @@
+
+{% macro onclick(fname, id) -%}
+{%- if fname -%}
+onclick="return {{fname}}({{id}})"
+{%- endif -%}
+{%- endmacro -%}
+
+{% macro show_neighbourhood(nghd, collection, fname) -%}
+  <div id="neighbourhood">
+    <div id="nghd_parents"  style="font-size:small">
+    <ul>
+    {% for path in nghd['parents'] %}
+    <li>
+      <span class="fr_type">[<a href="{{path[0].web_path(collection)}}" {{onclick(fname, path[0].id)}}">{{fragment_type_names[path[0].scale]}}</a>]</span>
+      <span class="fr_text">{{path[0].text}}</span>
+      {% if path.__len__() == 2 %}
+      <span class="ln_type">&lt;-({{link_type_names[path[1].link_type]}})-</span>
+      {% else %}
+      <span class="ln_type">&lt;-({{link_type_names[path[1].link_type]}})-[<a href="{{path[2].web_path(collection)}}" {{onclick(fname, path[2].id)}}">{{fragment_type_names[path[2].scale]}}</a>]-({{link_type_names[path[3].link_type]}})-</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+    </ul>
+    </div>
+    <div id="nghd_target" style="margin-left: 2.5em;font-size:large">
+      <span class="fr_type">[<a href="{{collection.path}}/claim/{{nghd['node'].id}}" {{onclick(fname, nghd['node'].id)}}">{{fragment_type_names[nghd['node'].scale]}}</a>]</span>
+      <span class="fr_text">{{nghd['node'].text}}</span>
+    </div>
+    <div id="nghd_children" style="margin-left: 5em; font-size:small">
+    <ul>
+    {% for path in nghd['children'] %}
+    <li>
+      {% if path.__len__() == 2 %}
+      <span class="ln_type">&lt;-({{link_type_names[path[1].link_type]}})-</span>
+      {% else %}
+      <span class="ln_type">&lt;-({{link_type_names[path[3].link_type]}})-[<a href="{{path[2].web_path(collection)}}" {{onclick(fname, path[2].id)}}">{{fragment_type_names[path[2].scale]}}</a>]-({{link_type_names[path[1].link_type]}})-</span>
+      {% endif %}
+      <span class="fr_type">[<a href="{{path[0].web_path(collection)}}" {{onclick(fname, path[0].id)}}">{{fragment_type_names[path[0].scale]}}</a>]</span>
+      <span class="fr_text">{{path[0].text}}</span>
+    </li>
+    {% endfor %}
+    </ul>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{% macro select_node_type(current_node_type) %}
+  <label for="node_type">node type:</label>
+  <select id="node_type" name="node_type">
+    {% for id, name in visible_statement_type_names.items() %}
+    <option {% if current_node_type == id %}selected{% endif %} value="{{id.name}}">{{name}}</option>
+    {%endfor%}
+  </select>
+{% endmacro %}
+
+{% macro link_form_elements(current_node_type, current_link_type, current_reverse) %}
+  <label for="link_type">Link type:</label>
+  <select id="link_type" name="link_type">
+    {% for id, name in link_type_names.items() %}
+    <option value="{{id.name}}" {% if current_link_type == id.name %}selected{% endif %}>{{name}}</option>
+    {% endfor %}
+  </select>
+  {{select_node_type(current_node_type)}}
+  <input type="checkbox"  id="backwards_link" name="backwards_link"
+  {%- if current_reverse %} checked{% endif -%}
+  > <label for="backwards_link">backwards link</label>
+{% endmacro %}
+
+
+{% macro task_list(tasks, target, theme_id, collection) %}
+    <div id="task_list">
+      <p><strong>Tasks:</strong></p>
+      <ul>
+        {%for task, tmpl, analysis in tasks %}
+        <li>
+          {%if analysis.id or not (task.materialize_analysis or tmpl) %}
+          <a href="{{analysis.web_path(collection)}}">
+          {%endif%}
+          {{task.name}}
+          {% if tmpl %}
+          - {{tmpl.nickname}}
+          {%endif%}
+          {%if analysis.id or not (task.materialize_analysis or tmpl) %}
+          </a>
+          {%endif%}
+          :
+          {% if analysis.status.name in ('pending', 'not_requested') %}
+            <form
+              name="form_{{task.name}}_{{tmpl.id}}"
+              style="display: inline;"
+              onsubmit="submit_action_form('{{task.name}}_{{tmpl.id}}')"
+
+              {% if analysis.id %}
+              hx-post="/f{{analysis.web_path(collection)}}"
+              {% else %}
+              hx-post="/f{{collection.path}}/analysis/{{task.name}}"
+              {% endif %}
+
+              hx-target="#content"
+            >
+              {%if target and target.id %}
+              <input type="hidden" name="target_id" value="{{target.id}}"/>
+              {% endif %}
+              {% if theme_id %}
+              <input type="hidden" name="theme_id" value="{{theme_id}}"/>
+              {% endif %}
+              <input type="hidden" name="selection_changes" id="selection_changes_{{task.name}}_{{tmpl.id}}" value="{}"/>
+              {% if tmpl %}
+                {% if tmpl.nickname %}
+                  <input type="hidden" name="task_template_nickname" value="{{tmpl.nickname}}"/>
+                {% else %}
+                  <input type="hidden" name="task_template_id" value="{{tmpl.id}}"/>
+                {% endif %}
+              {% endif %}
+              {% if  task.task_form_before() %}
+                <input id="show_form_{{task.name}}_{{tmpl.id}}" type="checkbox" onchange="toggle_div('form_{{task.name}}_{{tmpl.id}}')" />
+                <label for="show_{{task.name}}_{{tmpl.id}}">Setup</label>
+                <div id="form_{{task.name}}_{{tmpl.id}}" class="hidden">
+                  {{task.task_form_before()|safe}}
+                  <input id="submit_{{task.name}}_{{tmpl.id}}" type="submit" value="Run"/>
+                </div>
+              {%else%}
+                <input id="submit_{{task.name}}_{{tmpl.id}}" type="submit" value="Run"/>
+              {%endif%}
+            </form>
+          {% else %}
+            {{analysis.status.name}}
+          {% endif %}
+        </li>
+        {%endfor%}
+      </ul>
+    </div>
+{% endmacro %}
+
+{% macro wait_for_analysis(analysis) %}
+{% if analysis.status.name == 'ongoing' %}
+<img src="/static/loading.gif" height="20" width="20"/>
+<script>
+function wait_for_analysis(analysis_id) {
+  let pos = document.cookie.indexOf('Authorization="Bearer ');
+  if (pos > -1) {
+    let token = document.cookie.substring(pos+22, document.cookie.length-1);
+    pos = token.indexOf(';')
+    if (pos > -1) token = token.substr(0, pos);
+    pos = token.indexOf('"')
+    if (pos > 0) token = token.substr(0, pos);
+    req = new Request(`/api/analysis/${analysis_id}/wait`, options={headers: {Authorization: `Bearer ${token}`}});
+    fetch(req).then((response)=>{
+      document.location.reload()
+    }).catch(error => {
+      document.location.reload()
+    })
+  }
+}
+wait_for_analysis({{analysis.id}});
+</script>
+{%endif%}
+{% endmacro %}

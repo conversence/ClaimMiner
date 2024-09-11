@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Claim clusters{% endblock %}
+{% block content %}
+<div>
+{% if analysis %}
+  <h1>Analysis {{analysis.id}} for collection {{collection.name}}</h1>
+  {% if creator_name %}
+    <p>Manually created by {{creator_name}} using model {{analysis.params.get('model')}}</p>
+  {% else %}
+    <p>This analysis uses these parameters: {{analysis.params}}</p>
+  {% endif %}
+{% else %}
+  <h1>All clusters in collection</h1>
+{%endif%}
+<ul>
+  {% for (c_analysis, clusters) in grouped_clusters %}
+  <li>
+    {% if not analysis %}
+      <a href="{{c_analysis.web_path(collection)}}">Analysis {{c_analysis.id}}</a>
+      {% if c_analysis.params.get('created_by') %}
+        manually created by {{usernames[c_analysis.params.get('created_by')]}} using model {{c_analysis.params.get('model')}}
+      {% else %}
+        using parameters: {{c_analysis.params}}
+      {% endif %}
+    {%endif%}
+    <ul>
+      {% for cluster in clusters %}
+      <li>
+        <a href="{{c_analysis.web_path(collection)}}/{{cluster.id}}">cluster {{cluster.id}}</a>
+        <ol>
+          {%if cluster.distinguished_claim %}
+          <li>
+            <b>central claim:</b> {{cluster.distinguished_claim.text}}
+          </li>
+          {% endif %}
+          {% for in_cluster in cluster.has_cluster_rels %}
+            {% if in_cluster.fragment != cluster.distinguished_claim %}
+            <li>
+              {%if in_cluster.manual %}
+              (➕ by {{usernames[in_cluster.confirmed_by_id]}})
+              {%else%}
+                {%if in_cluster.confirmed_by_id %}
+                  (✅ by {{usernames[in_cluster.confirmed_by_id]}})
+                {%endif%}
+              {%endif%}
+            {{in_cluster.fragment.text}}
+            </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+      </li>
+      {% endfor %}
+    </ul>
+  </li>
+  {% endfor %}
+</div>
+{% endblock %}

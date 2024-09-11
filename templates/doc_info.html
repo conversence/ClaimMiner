@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Document{% endblock %}
+{% block content %}
+<div>
+  {% if doc.return_code == 200 %}
+  <a href="{{doc.url}}">{{doc.title or doc.url}}</a>
+  <a href="{{doc.web_path(collection)}}/raw">file</a>
+  {% if doc.text_identity %}
+    (<a href="{{doc.web_path(collection)}}/text">text</a>: {{(doc.text_size or 0) // 1024}} Kb)
+    <a href="{{doc.web_path(collection)}}/links">Doc links</a>
+  {% endif %}
+
+  {% if not has_embedding %}No embedding{%endif%}
+  {% if not public_contents %}
+  <p>This document is copyrighted, and access to the content is partial.</p>
+  {% endif %}
+  <p></p>
+  {% for summary in summaries %}
+  <p id="s_{{summary.id}}"><em>Summary</em>: {{summary.text}}<br/>
+  From analysis:
+  {% for analysis in summary.from_analyses %}
+    <a href="{{analysis.web_path(collection)}}">{{analysis.analyzer_name}} analysis {{analysis.id}}</a>
+  {%endfor %}
+  </p>
+  {%endfor%}
+  <ol>
+  {% for para in paras %}
+    <li value={{para.position}}><a name="p_{{para.id}}"></a>{{renderings[para.id]|safe}}
+    {% if para.id in generated_claim_by_para %}
+    <br/><span class="generated_claims_label">Has generated:</span>
+    <ul class="generated_claims">
+      {% for (claim, analysis) in generated_claim_by_para[para.id] %}
+      <li><a href="{{claim.web_path(collection)}}">{{claim.id}}</a> {{claim.text}}<br/>
+
+      </li>
+      {% endfor %}
+    </ul>
+    {%endif%}
+    </li>
+  {% endfor %}
+  </ol>
+  <ul>
+    {% for model in num_frag_embeddings %}
+      {% if num_frag_embeddings[model] > 0 %}
+      <li>{{model}}: {{num_frag_embeddings[model]}} embeddings</li>
+      {%endif%}
+    </li>
+    {%endfor%}
+  </ul>
+  <style>
+    .generated_claims, .generated_claims_label {
+      font-size: small;
+    }
+  </style>
+{% else %}
+  {{doc.url}} (error: {{doc.return_code}})
+{% endif %}
+  {{ macros.task_list(tasks, doc, '', collection) }}
+</div>
+<script>
+function submit_action_form(form_name) {
+  return true;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}
+Prompt results
+{% endblock %}
+<script>
+function output_change(output_num) {
+}
+
+function save_claim(pos) {
+  document.prompt.saving.value=pos;
+  htmx.trigger(document.prompt, 'submit');
+}
+
+function export_claim(pos) {
+  document.prompt.exporting.value=pos;
+  htmx.trigger(document.prompt, 'submit');
+}
+</script>
+{% block content %}
+  <p>Analysis {{analysis.id}} ({{analysis.status.name}}) {{ macros.wait_for_analysis(analysis) }}</p>
+  <p>Analyzer: <a href="{{analysis.task_template.web_path(collection)}}">{{analysis.task_template.nickname}}</a></p>
+  {% if analysis.params %}
+  <input id="show_analyzer" type="checkbox" onchange="toggle_div('analyzer')"/> <label id="show_analyzer_label" for="show_analyzer">parameters</label>
+  <div id="analyzer" class="hidden">
+    <code>{{analysis.params|safe}}</code>
+  </div>
+  {% endif %}
+  {% if theme %}
+    <p><label>Theme {{theme.type_name}}: </label> {{theme.text}}</p>
+  {% endif %}
+<form id="prompt" name="prompt" hx-post="/f{{analysis.web_path(collection)}}/prompt" hx-target="#content">
+  <input type="hidden" name="continuation" value="true"/>
+  <input type="hidden" name="saving" value=""/>
+  <input type="hidden" name="exporting" value=""/>
+  {% if target %}
+  {{ macros.show_neighbourhood(target_nghd, collection, '') }}
+  {% endif %}
+  {% if analyzer.name == 'fragment_prompt_analyzer' %}
+  <p>Fragments: (<input name="show_fragments" type="checkbox" onchange="toggle_div('fragments')"/> <label id="show_fragments_label" for="show_fragments">show</label>)</p>
+  <div id="fragments" class="hidden">
+    <ol>
+    {% for f in fragments.values() %}
+      <li value="f.id">(<a href="{{f.web_path(collection)}}">{{f.id}}</a>) {{f.text}}</li>
+    {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+  <div id="results">
+    <h3>Prompt results:</h3>
+    <ol>
+    {% for r in analysis.results %}
+      <li>
+        {% if 'fragment_id' in r %}
+          {{result_nodes[r['fragment_id']].text}} (<a href="{{collection.path}}/claim/{{r['fragment_id']}}">{{r['fragment_id']}}</a>)
+        {% else %}
+          <input type="text" name="text_{{loop.index}}" value="{{r['text']}}" onchange="output_change({{loop.index}})" style="width:80%"/>
+          {% if sources %}
+          [{% for source_id in r['sources'] %}
+          <a href="{{collection.path}}/claim/{{source_id}}" title="{{fragments[source_id].text}}">{{source_id}}</a>{% if not loop.last%}, {%endif%}
+          {% endfor %}]
+          {% endif %}
+          <button onclick="save_claim({{loop.index}})" style="margin-right: 1em;">save</button>
+          <!-- TODO: Look at neighbours, allow to link some neighbours to central claim? -->
+        {% endif %}
+      </li>
+    {%endfor%}
+    </ol>
+    {% if analysis.results and user_can('admin') %}
+      <button name="delete_results">Delete all results</button>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}

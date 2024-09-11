@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Collection{% endblock %}
+{% block content %}
+<div>
+  <h1>Collection <em>{{collection.name}}</em></h1>
+  <a href="{{collection.path}}/document">{{num_docs}} documents</a>, <a href="{{collection.path}}/claim">{{num_frags}} claims</a>
+  {% if theme %}
+  <p>Question theme: <a href="{{theme.web_path(collection)}}">{{theme.id}}</a> {{theme.text}}</p>
+  {% endif %}
+  {% if user_can('add_document') %}
+  <p><a href="{{collection.path}}/document/upload">Upload new documents</a></p>
+  {%endif%}
+  {% if user_can('add_claim') %}
+  <p><a href="{{collection.path}}/claim/propose">Propose a new claim</a></p>
+  {%endif%}
+  {% if user_can('admin') %}
+  <p><a href="{{collection.path}}/edit">Edit collection</a></p>
+  {%endif%}
+  {{ macros.task_list(tasks, collection, '', collection) }}
+</div>
+
+{% endblock %}

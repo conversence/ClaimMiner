@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}
+Claim GDELT search
+{% endblock %}
+{% block content %}
+<h2>Search for GDELT documents relevant to the claim</h2>
+<form hx-post="/f{{collection.path}}/claim/{{claim_id}}/gdelt" id="gdelt" hx-target="#content">
+  <p>
+  <label for="limit">Number of documents:</label>
+  <input name="limit" type="number" min="1" max="1000" default="100"/>
+  </p>
+  <p>
+  <label for="limit">Added after:</label>
+  <input name="date" type="date"/>
+  </p>
+  <button type="submit">Add documents</button>
+</form>
+{% endblock %}}

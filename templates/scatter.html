@@ -1,0 +1,210 @@
+<style>
+body {
+  background-image-disabled: url(/static/cloud.png), linear-gradient(to bottom right, #042E49, black);
+  background-repeat: no-repeat;
+}
+label {
+  color: white;
+}
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+  font-size: small;
+  color: white;
+  z-index: 1;
+}
+.kw {
+  position: absolute;
+  font-size: x-small;
+  color: #fff0c0;
+  cursor: none;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+}
+.dot {
+  fill: #8b9dab
+}
+.form-div {
+  bottom: 1ex;
+  position: absolute;
+}
+.bottom-form {
+  margin-block-end: 0;
+}
+.claims {
+  height: 100%;
+}
+#body {
+  height: 100%;
+}
+#content {
+  background-color: transparent;
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+</style>
+<script>
+
+const margin = {top: 20, right: 20, bottom: 30, left: 40};
+var claimDivRect;
+var total_width;
+var total_height;
+var all_data;
+var xScale;
+var yScale;
+var svg = null;
+var claimsDiv = null;
+
+function xValue(d) { return d.x; };
+function yValue(d) { return d.y; };
+function tValue(d) { return d.t; };
+function idValue(d) { return d.id; };
+function kIdValue(d) { return "k"+d.id; };
+
+
+function onResize() {
+  const claimsDivDom = document.getElementById("claims");
+  if (claimsDivDom !== null) {
+    claimsDivRect = claimsDivDom.getBoundingClientRect();
+    total_width = Math.floor(document.children[0].clientWidth);
+    total_height = Math.floor(document.children[0].clientHeight - claimsDivRect.top);
+    const scatter_width = total_width - margin.left - margin.right;
+    const scatter_height = total_height - margin.top - margin.bottom;
+    xScale = d3.scaleLinear().range([0, scatter_width])
+      .domain([d3.min(all_data, xValue), d3.max(all_data, xValue)]);
+    yScale = d3.scaleLinear().range([0, scatter_height])
+      .domain([d3.min(all_data, yValue), d3.max(all_data, yValue)]);
+    if (svg != null) {
+      svg.attr("width", total_width+"px")
+      svg.attr("height", total_height+"px")
+      svg.select("g").select("g").selectAll("circle").dispatch("resize");
+    }
+    if (claimsDiv!= null) {
+      claimsDiv.selectAll(".kw").dispatch("resize");
+    }
+  }
+}
+
+function loaded() {
+  const data = JSON.parse(document.getElementById("data").textContent),
+      texts = Object.fromEntries(data.map(function (d) {return [d.id, d.t]})),
+      keywords_text = document.getElementById('keywords').textContent.trim(),
+      keywords = keywords_text.length?JSON.parse(keywords_text):[],
+      similarities = JSON.parse(document.getElementById("similarities").textContent)
+      kw_text = Object.fromEntries(keywords.map(function (k) {return [k.id, k.t]})),
+      idToN = Object.fromEntries(data.map(function (d, n) {return [d.id, n]})),
+      line = d3.line();
+  claimsDiv = d3.select("#claims");
+  all_data = data.concat(keywords);
+  onResize();
+  const xMap = function(d) { return xScale(xValue(d));}, // data -> display
+      yMap = function(d) { return yScale(yValue(d));}, // data -> display
+      xMapK = function(d) { return Math.round(xScale(xValue(d)) + claimsDivRect.x + margin.left)+"px";}, // data -> display
+      yMapK = function(d) { return Math.round(yScale(yValue(d)) + claimsDivRect.y + margin.top)+"px";}, // data -> display
+      tooltip = d3.select("#claims").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 1);
+  svg = claimsDiv.append("svg")
+        .attr("width", total_width)
+        .attr("height", total_height);
+  svg_g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  if (keywords.length > 0) {
+    claimsDiv.selectAll(".kw").data(keywords).enter()
+      .append("div")
+      .attr("id", kIdValue)
+      .attr("class", "kw").html(tValue)
+      .style("left", xMapK)
+      .style("top", yMapK)
+      .on("resize", function(d) {
+        const target = d3.select(d.target);
+        target.style("left", xMapK(d.target.__data__));
+        target.style("top", yMapK(d.target.__data__));
+      })
+  }
+  svg_g.append("g")
+    .selectAll(".dot")
+    .data(data)
+    .enter().append("circle")
+    .attr("class", "dot")
+    .attr("cx", xMap)
+    .attr("cy", yMap)
+    .attr("r", 2.5)
+    .attr("id", idValue)
+    .on("mouseover", function(d) {
+      tooltip.transition()
+              .duration(200)
+              .style("opacity", .9);
+      tooltip.html(texts[d.srcElement.id])
+            .style("left", (d.pageX + 5) + "px")
+            .style("top", (d.pageY - 28) + "px");
+      var sims = similarities[idToN[d.srcElement.id]];
+      claimsDiv.selectAll(".kw").style("opacity", function (x) { return (1 + sims[x.id])/2})//.style("color", "black")
+    })
+    .on("mouseout", function(d) {
+        tooltip.transition()
+              .duration(500)
+              .style("opacity", 0);
+        svg_g.selectAll("text").remove();
+        claimsDiv.selectAll(".kw").style("opacity", 1)//.style("color", "grey")
+    })
+    .on("resize", function(d) {
+      const target = d3.select(d.target);
+      target.attr("cx", xMap(d.target.__data__));
+      target.attr("cy", yMap(d.target.__data__));
+    })
+}
+
+window.addEventListener("resize", onResize);
+</script>
+
+  <script class="hidden" id="scripts" type="json">[
+    "//d3js.org/d3.v7.min.js",
+    "//d3js.org/d3-interpolate.v3.min.js",
+    "//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.13.6/underscore-min.js"
+  ]</script>
+
+  <div class="form-div">
+  {# This is not htmx-based #}
+  <form class="bottom-form" id="params" method="GET">
+    {% if models[1:] %}
+    <label for="model">model</label><select id="model" name="model" onchange="form.submit()">
+      {%for model_id in models %}
+      <option {% if model_id == model.name %}selected{% endif %} value="{{model_id}}">{{model_names[model_id]}}</option>
+      {% endfor %}
+    </select>
+    <br/>
+    {% endif %}
+    <label for="method">method</label>
+    <select id="method" name="method" onchange="form.submit()">
+      <option {% if method=='TruncatedSVD' %}selected{% endif %}>TruncatedSVD</option>
+      <option {% if method=='PCA' %}selected{% endif %}>PCA</option>
+      <option {% if method=='SpectralEmbedding' %}selected{% endif %}>SpectralEmbedding</option>
+      <option {% if method=='DictionaryLearning' %}selected{% endif %}>DictionaryLearning</option>
+      <option {% if method=='FactorAnalysis' %}selected{% endif %}>FactorAnalysis</option>
+      <option {% if method=='KernelPCA' %}selected{% endif %}>KernelPCA</option>
+      <option {% if method=='TSNE' %}selected{% endif %}>TSNE</option>
+      <!-- option {% if method=='MDS' %}selected{% endif %}>MDS</option -->
+      <option {% if method=='Isomap' %}selected{% endif %}>Isomap</option>
+      <option {% if method=='LocallyLinearEmbedding' %}selected{% endif %}>LocallyLinearEmbedding</option>
+    </select>
+    <br />
+    <label for="keywords">keywords</label>
+    <input id="keyword" name="keyword" type="text" value="{{keywords}}" onchange="form.submit()"></input>
+  </form>
+  </div>
+  <main id="content">
+    <div id="claims"></div>
+  </main>
+  <script id="data" type="json">
+    {{data | safe}}
+  </script>
+  <script id="keywords" type="json">
+    {{keyword_data | safe}}
+  </script>
+  <script id="similarities" type="json">
+    {{similarities | safe}}
+  </script>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+    <title>Claim Miner - Cloud</title>
+    {% endblock %}
+    <style>
+      @font-face {
+        font-family: 'Vintage Goods';
+        font-style: normal;
+        src: local('Vintage Goods'), url('/static/fonts/Vintage Goods.woff'), format('woff');
+      }
+      @font-face {
+        font-family: 'Century Supra';
+        font-style: normal;
+        src: local('Century Supra'), url('/static/fonts/century_supra_a_regular.woff2'), format('woff2');
+      }
+    </style>
+    <script>
+        function loadScript(scriptUrl) {
+          // https://stackoverflow.com/a/53744331/439048
+          const script = document.createElement('script');
+          script.src = scriptUrl;
+          document.body.appendChild(script);
+
+          return new Promise((res, rej) => {
+            script.onload = function() {
+              res();
+            }
+            script.onerror = function () {
+              rej();
+            }
+          });
+        }
+        function start() {
+          const scriptsEl = document.getElementById('scripts');
+          if (scriptsEl !== null) {
+            const scripts = JSON.parse(scriptsEl.innerText);
+            if (!Array.isArray(scripts)) {
+              scripts = [];
+            }
+            results = scripts.map(script => loadScript(script));
+            Promise.all(results).then(() => {
+              loaded();
+            });
+          } else {
+            loaded();
+          }
+        }
+    </script>
+</head>
+<body id="body" onload="start()">
+{% include 'scatter.html' %}
+</body>
+</html>

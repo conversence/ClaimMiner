@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Administration{% endblock %}
+
+{% macro permissions_flags(p, user, permissions_per_user) -%}
+{%- if collection -%}
+{%- if user.can(p) %} disabled {% endif -%}
+{%- if user.can(p) or (user.id in permissions_per_user and p in permissions_per_user[user.id]) %}checked{% endif -%}
+{%- else -%}
+{%- if user.can(p) %} checked {% endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<h2>
+  {% if collection %}
+  Permissions for {{collection.name}}
+  {% else %}
+  Global permissions
+  {% endif %}
+</h2>
+<div>
+  <form hx-post="/f{{collection.path}}/admin" hx-target="#content">
+  <table class="table">
+    <thead>
+    <tr>
+      <th scope="col">Username</th>
+      <th scope="col">email</th>
+      <th>Confirmed</th>
+      {% for permission_name in permissions %}
+      <th scope="col">{{permission_name}}</th>
+      {% endfor %}
+    </tr>
+    </thead>
+    <tbody>
+    {% for user in users %}
+        <tr>
+          <td>
+            {{user.handle}}
+          </td>
+          <td>
+            {{user.email}}
+          </td>
+          <td>
+            <input type="checkbox" name="{{user.id}}_confirmed" {% if user.confirmed %}checked{% endif %} />
+          </td>
+          {% for permission_name in permissions %}
+          <td>
+            <input type="checkbox" name="{{user.id}}_{{permission_name}}" {{permissions_flags(permission_name, user, permissions_per_user)}}/>
+          </td>
+          {% endfor %}
+        </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    <button type="submit" name="submit">Save</button>
+  </form>
+</div>
+{% endblock %}

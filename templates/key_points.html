@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Key points{% endblock %}
+{% block content %}
+<div>
+  <ul>
+    {% for fragment, target_para, quotes in keypoints %}
+      <li>
+        <a href="{{collection.path}}/document/{{fragment.doc_id}}#p_{{target_para.id}}">(source)</a> {{fragment.text}}
+        <ol>
+          {% for link, quote, source_para in quotes %}
+          <li>
+          <a href="{{collection.path}}/document/{{quote.doc_id}}#p_{{source_para.id}}">source</a> ({{"{:.4f}".format(link.score)}}) {{quote.text}}
+          </li>
+          {% endfor %}
+        </ol>
+      </li>
+    {% else %}
+      <li>No key point yet</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+    <script src="https://unpkg.com/htmx.org@2.0.1" integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <title>Claim Miner</title>
+    {% endblock %}
+    <script>
+        var currentNav = undefined;
+        function setNav(nav) {
+          if (currentNav!== undefined) {
+            currentNav.classList.remove('active');
+          }
+          currentNav = getElementById('nav-'+nav);
+          if (currentNav!== undefined) {
+            currentNav.classList.add('active');
+          }
+        }
+        function setPagination(prev, next, enabled) {
+          if (!enabled || (!prev && !next)) {
+            document.getElementById('pagination').classList.add('hidden');
+          } else {
+            document.getElementById('pagination').classList.remove('hidden');
+            const params = new URLSearchParams(document.location.search);
+            const prevLink = document.getElementById('prev-page');
+            const nextLink = document.getElementById('next-page');
+            if (!prev) {
+              prevLink.classList.add('disabled');
+            } else {
+              prevLink.classList.remove('disabled');
+              params.set('start', prev);
+              prevLink.href = `${document.location.pathname}?${params.toString()}`;
+            }
+            if (!next) {
+              nextLink.classList.add('disabled');
+            } else {
+              nextLink.classList.remove('disabled');
+              params.set('start', next);
+              nextLink.href = `${document.location.pathname}?${params.toString()}`;
+            }
+          }
+        }
+        function ensurePathAtLoad(ev) {
+          const path = document.location.pathname;
+          var responsePath = ev.detail.pathInfo.responsePath;
+          if (responsePath.startsWith('/f'))
+            responsePath = responsePath.substring(2);
+          if (path!== responsePath) {
+            if (ev.detail.pathInfo.responsePath !== ev.detail.pathInfo.requestedPath) {
+              // there was a redirect
+              history.replaceState({}, '', responsePath);
+            } else {
+              history.pushState({}, '', responsePath);
+            }
+          }
+        }
+        function getDocPath() {
+          var href = document.location.pathname;
+          if (document.location.search) {
+            href += '?' + document.location.search;
+          }
+          if (document.location.hash) {
+            href += document.location.hash;
+          }
+          return href;
+        }
+        function docLoaded(ev) {
+          if (ev.detail.elt.tagName == 'BODY') {
+            console.log('doc loaded');
+            const content = document.getElementById('content');
+            if (content && content.childElementCount === 0) {
+              loadFragment(getDocPath());
+            }
+          }
+        }
+        function loadScript(scriptUrl) {
+          // https://stackoverflow.com/a/53744331/439048
+          const script = document.createElement('script');
+          script.src = scriptUrl;
+          document.body.appendChild(script);
+
+          return new Promise((res, rej) => {
+            script.onload = function() {
+              res();
+            }
+            script.onerror = function () {
+              rej();
+            }
+          });
+        }
+        function fragmentLoaded(ev) {
+          const target = ev.detail.etc?.targetOverride || ev.target;
+          if (target.id == 'content') {
+            ensurePathAtLoad(ev);
+            title = document.getElementById('title');
+            if (title!== null) {
+              document.title = title.innerText;
+            }
+            const collection_menu_el = document.getElementById('collection-menu-text');
+            if (collection_menu_el !== null) {
+              const collection_name_el = document.getElementById('collection-name');
+              if (collection_name_el== null || collection_name_el.innerText == '') {
+                collection_menu_el.innerText = 'Collections';
+              } else {
+                collection_menu_el.innerText = `C: ${collection_name_el.innerText}`;
+              }
+            }
+            // should call the fragment's loaded function
+            const scriptsEl = document.getElementById('scripts');
+            if (scriptsEl !== null) {
+              const scripts = JSON.parse(scriptsEl.innerText);
+              if (!Array.isArray(scripts)) {
+                scripts = [];
+              }
+              results = scripts.map(script => loadScript(script));
+              Promise.all(results).then(() => {
+                loaded();
+              });
+            } else {
+              loaded();
+            }
+          }
+        }
+        // htmx.logAll()
+        function loadFragment(path) {
+          htmx.ajax('GET', '/f'+path, '#content');
+          // This should go in the loaded maybe?
+          if (path !== getDocPath()) {
+            history.pushState({}, '', path);
+          }
+        }
+        function onBackButton(ev) {
+          console.log('on back button', ev);
+          loadFragment(getDocPath());
+        }
+        function interceptClickEvent(e) {
+          var href;
+          var target = e.target || e.srcElement;
+          if (target.tagName !== 'A') {
+            target = target.closest('A');
+            if (target === null) return;
+          }
+          if (target.tagName === 'A') {
+            if (target.getAttribute('hx-get') || target.getAttribute('target'))
+              return;
+            href = target.getAttribute('href');
+            if (href && !href.startsWith('#')) {
+              if (target.classList.contains('nav-link') && !target.classList.contains('no-collection')) {
+                collection_name_el = document.getElementById('collection-name')
+                if (collection_name_el!== null && collection_name_el.innerText!== '') {
+                  href = `/c/${collection_name_el.innerText}${href}`;
+                }
+              }
+              loadFragment(href);
+              e.preventDefault();
+            }
+          }
+        }
+        function toggle_div(divname) {
+          const btn = document.getElementById('show_'+divname);
+          if (btn!== null) {
+            const div = document.getElementById(divname);
+            if (div !== null) {
+              if (btn.checked) {
+                div.classList.remove('hidden');
+              } else {
+                div.classList.add('hidden');
+              }
+            }
+            const label = document.getElementById('show_'+divname+'_label');
+            if (label !== null) {
+              if (btn.checked) {
+                label.classList.remove('hidden');
+              } else {
+                label.classList.add('hidden');
+              }
+            }
+          }
+        }
+        //listen for link click events at the document level
+        if (document.addEventListener) {
+            document.addEventListener('click', interceptClickEvent);
+            document.addEventListener('htmx:load', docLoaded);
+            document.addEventListener('htmx:afterSettle', fragmentLoaded);
+            window.addEventListener('popstate', onBackButton);
+        } else if (document.attachEvent) {
+            document.attachEvent('onclick', interceptClickEvent);
+            document.attachEvent('htmx:load', docLoaded);
+            document.attachEvent('htmx:afterSettle', fragmentLoaded);
+            window.attachEvent('popstate', onBackButton);
+        }
+    </script>
+</head>
+<body id="body">
+<header>
+  <nav class="navbar navbar-dark navbar-expand-lg fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{collection.path or '/'}}">
+      <div id="logo"></div>
+      <span id="logo-spacer"></span>
+      <span class="brand-title">
+        <span class="brand-part2">ClaimMiner</span>
+      </span>
+    </a>
+    <ul id="pagination" class="pagination hidden">
+      <li class="page-item">
+        <a id="prev-page" class="page-link {% if prev=='' %}disabled{% endif %}" href="" onclick="onPaginate(false)" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+      <li class="page-item">
+        <a id="next-page" class="page-link {% if not next %}disabled{% endif %}" href="" onclick="onPaginate(true)" aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    </ul>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span id="collection-menu-text">Collections</span>
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <li class="nav-item"><a class="nav-link" href="/">Global scope</a></li>
+            {% for coll_name in collection_names %}
+            <li class="nav-item"><a class="nav-link no-collection" href="/c/{{coll_name}}">{{coll_name}}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="/claim">Claims</a></li>
+        <li class="nav-item"><a class="nav-link" href="/document">Documents</a></li>
+        <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Utilities
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <li><a class="nav-link dropdown-item if-collection" href="/analysis/cluster">Claim clusters</a></li>
+            {% if user_can('admin') %}
+            <li><a class="nav-link dropdown-item" href="/dashboard">Dashboard</a></li>
+            {% endif %}
+            {% if user_can('admin') %}
+            <li><a class="nav-link dropdown-item" href="/task_trigger">Task triggers</a></li>
+            {% endif %}
+            <li><a class="nav-link dropdown-item" href="/claim/scatter">Claim cloud</a></li>
+            <li><a class="nav-link dropdown-item" href="/template">Task templates</a></li>
+          </ul>
+        </li>
+        {% if user_can('admin') %}
+        <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+</header>
+<main class="flex-shrink-0">
+  <div id="content" class="container-fluid">
+  {% block content %}{% endblock %}
+  </div>
+</main>
+</body>
+</html>

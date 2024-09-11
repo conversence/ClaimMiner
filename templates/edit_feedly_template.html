@@ -1,0 +1,25 @@
+{% extends "edit_template.html" %}
+{% block template_form %}
+{% if can_edit %}
+  <p>
+  <label for="stream_id">Feed identifier:</label>
+  <input name="stream_id" type="text" value="{{template.stream_id or ''}}"/>
+  </p>
+{% else %}
+  <p>Feed identifier: {{template.stream_id or ''}}</p>
+{% endif %}
+
+  <p>
+  <label for="post_process_text">Post-process text with Junto:</label>
+  <input type="checkbox" name="post_process_text"
+  {%if template.post_process_text%}checked{%endif%}
+  {% if not can_edit %}disabled{% endif %}/>
+  </p>
+  <p>
+  <label for="include_hallucinations">Include Junto hallucinations:</label>
+  <input type="checkbox" name="include_hallucinations"
+  {%if template.include_hallucinations%}checked{%endif%}
+  {% if not can_edit %}disabled{% endif %}/>
+  </p>
+
+{% endblock %}

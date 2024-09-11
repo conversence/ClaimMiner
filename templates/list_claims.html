@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Claims{% endblock %}
+{% block content %}
+<div>
+  {% if user_can("add_claim") %}
+  <div>
+    <a href="{{collection.path}}/claim/propose">Propose a new claim</a><br/>
+    <a href="{{collection.path}}/claim/upload">Upload a list of claims</a>
+  </div>
+  {% endif %}
+  {% if claim_indices | length %}
+    <h2>Claim indices:</h2>
+    <ol>
+      {% for claimi in claim_indices %}
+        <li>
+          <!-- {{claimi.__dict__}} -->
+          {{claimi.text}} <a style="font-size: small" href="{{claimi.web_path(collection)}}/scatter">Cloud</a>
+          <form hx-get="/f{{claimi.web_path(collection)}}" hx-target="#content">
+            <button type="submit" name="descendants" class="btn btn-sm btn-outline-primary">Descendants</button>
+            <button type="submit" name="direct" class="btn btn-sm btn-outline-primary">Direct claims</button>
+            <input type="checkbox" name="reload">Reload claims</input>
+          </form>
+        </li>
+      {% endfor %}
+    </ol>
+  {%endif%}
+  <h2>Claims:</h2>
+  <ol start="{{offset+1}}">
+    {% for claim, num_analysis, from_analyses, target_of_analyses in claims %}
+      <li>
+        <a href="{{claim.web_path(collection)}}">[{{fragment_type_names[claim.scale]}}]</a>
+        {{claim.text}}
+        <span style="font-size: small">
+        {% if num_analysis > 0 %}({{num_analysis}} analysis){% endif %}
+        {% for analysis_id in from_analyses %}
+        From <a href="{{collection.path}}/analysis/{{analysis_id}}">analysis {{analysis_id}}</a>
+        {% endfor %}
+        {% for analysis_id in target_of_analyses %}
+        Used in <a href="{{collection.path}}/analysis/{{analysis_id}}">analysis {{analysis_id}}</a>
+        {% endfor %}
+        </span>
+      </li>
+    {% else %}
+      <li>No claim yet</li>
+    {% endfor %}
+  </ol>
+</div>
+{% endblock %}
+{% block script_content %}
+  function loaded() {
+    setPagination("{{prev}}", "{{next}}", {{claims|length}});
+  }
+  function onPaginate(direction) {}
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Claim clusters{% endblock %}
+{% block content %}
+<div>
+  <h2>Cluster {{cluster.id}} of analysis {{analysis.id}} for collection {{collection.name}}</h2>
+  {% if analysis.params.get('created_by') %}
+  <p>Manually created by {{usernames[analysis.params.get('created_by')]}} using model {{analysis.params.get('model')}}</p>
+  {% else %}
+  <p>This cluster was generated in <a href="{{analysis.web_path(collection)}}">analysis {{analysis.id}}</a> with these parameters: {{analysis.params}}</p>
+  {% endif %}
+  <p>Current cluster diameter: {{"%0.4f" % boundary}}</p>
+  {%if user_can('confirm_claim') %}
+  <form name="cluster_form" hx-post="/f{{cluster.web_path(collection)}}" hx-target="#content">
+    <p>
+    Auto-include new claims coming within this distance: <input type="number" id="auto_include_diameter" name="auto_include_diameter" min=0 max=1 step="0.01" value="{{cluster.auto_include_diameter}}"/>
+    </p>
+    <p>Claims within this cluster are:
+      <span class="relevance">
+        <input type="radio" id="relevant" name="relevance" value="relevant" {% if cluster.relevant == 'relevant' %}checked="checked"{%endif%}
+        /><label for="relevant">relevant</label
+        ><input type="radio" id="unknown" name="relevance" value="unknown" {% if cluster.relevant == 'unknown' %}checked="checked"{%endif%}
+        /><label for="unknown" >unknown</label
+        ><input type="radio" id="irrelevant" name="relevance" value="irrelevant" {% if cluster.relevant == 'irrelevant' %}checked="checked"{%endif%}
+        /><label for="irrelevant">irrelevant</label
+        ></span>
+    to the collection's claim
+    <input type="hidden" id="target_id" name="target_id" value="">
+    <input type="hidden" id="target_action" name="target_action" value="">
+    <button type="submit">Save</button>
+    <!-- {{has_confirmed_fragment}} -->
+    <button type="submit" name="delete_cluster" {%if has_confirmed_fragment %}disabled{%endif%}>Delete cluster</button>
+  </form>
+  {%endif%}
+  <div class="claims">
+  <h3>Cluster claims:</h3>
+  <div class="cluster_claims">
+  <table>
+    <tr><th>Confirmed</th> <th>Distance</th> {%if user_can('confirm_claim') %}<th>Remove</th> <th>Make central</th> <th>New cluster</th>{%endif%} <th>Claim</th></tr>
+    {% for claim in in_cluster %}
+    <tr>
+      <td>
+      {%if joinrows[claim.id].manual %}
+      ➕ by {{usernames[joinrows[claim.id].confirmed_by_id]}}
+      {%else%}
+        {%if joinrows[claim.id].confirmed_by_id %}
+        ✅ by {{usernames[joinrows[claim.id].confirmed_by_id]}}
+        {%else%}
+          {%if user_can('confirm_claim') %}
+            <button name="confirm" onclick="action({{claim.id}}, 'confirm')">✔️</button>
+          {%endif%}
+        {%endif%}
+      {%endif%}
+      </td>
+      {% if loop.first %}
+      <td>🎯</td>
+      {%if user_can('confirm_claim') %}<td></td><td></td><td></td>{%endif%}
+      {% else %}
+      <td>
+      {{"%0.4f" % distances[claim.id]}}
+      {%if user_can('confirm_claim') %}
+      <button name="set_diameter" onclick="action({{claim.id}}, 'diameter')">◌</button>
+      {%endif%}
+      </td>
+      {%if user_can('confirm_claim') %}
+      <td><button name="remove" onclick="action({{claim.id}}, 'remove')">🗑️</button></td>
+      <td><button name="set_center" onclick="action({{claim.id}}, 'set_center')">🎯</button></td>
+      <td><button name="add_cluster" onclick="action({{claim.id}}, 'add_cluster')">⨁</button></td>
+      {%endif%}
+      {% endif %}
+      <td><a href="{{claim.web_path(collection)}}">{{claim.id}}</a> {{claim.text}}</td>
+    </tr>
+    {% endfor %}
+    </table>
+    </div>
+    {% if near_neighbours %}
+    <h3>More neighbours within that cluster's boundary:</h3>
+    <div class="near_neighbours">
+    <table>
+      <tr><th>In clusters</th> <th>Distance</th>{%if user_can('confirm_claim') %} <th>Add</th> <th>Add to here</th>{%endif%} <th>Claim</th></tr>
+    {% for claim in near_neighbours %}
+     <tr>
+      <td>
+        {% for icr in claim.in_cluster_rels %}
+          <a href="{{collection.path}}/analysis/cluster/{{icr.cluster.analysis_id}}/{{icr.cluster_id}}">{{icr.cluster_id}}</a>
+        {%else%}
+          {%if user_can('confirm_claim') %}
+            <button name="add_cluster" onclick="action({{claim.id}}, 'add_cluster')">⨁</button>
+          {%endif%}
+        {%endfor%}
+      </td>
+      <td>
+      {{"%0.4f" % distances[claim.id]}}
+      {%if user_can('confirm_claim') %}
+      <button name="set_diameter" onclick="action({{claim.id}}, 'diameter')">◌</button>
+      {%endif%}
+      </td>
+      {%if user_can('confirm_claim') %}
+      <td><button name="add" onclick="action({{claim.id}}, 'add')">➕</button></td>
+      <td><button name="add_to_here" onclick="action({{claim.id}}, 'add_up_to')">➜➕</button></td>
+      {%endif%}
+      <td><a href="{{claim.web_path(collection)}}">{{claim.id}}</a> {{claim.text}}</td>
+     </tr>
+     {% endfor %}
+    </table>
+    </div>
+    {% endif %}
+    {%if far_neighbours %}
+    <h3>More neighbours outside that cluster's boundary:</h3>
+    <div class="far_neighbours">
+    <table>
+     <tr><th>In clusters</th> <th>Distance</th> {%if user_can('confirm_claim') %}<th>Add</th> <th>Add to here</th>{%endif%} <th>Claim</th></tr>
+     {% for claim in far_neighbours %}
+     <tr>
+      <td>
+      {% for icr in claim.in_cluster_rels %}
+        <a href="{{collection.path}}/analysis/cluster/{{icr.cluster.analysis_id}}/{{icr.cluster_id}}">{{icr.cluster_id}}</a>
+      {%else%}
+        {%if user_can('confirm_claim') %}
+          <button name="add_cluster" onclick="action({{claim.id}}, 'add_cluster')">⨁</button>
+        {%endif%}
+      {%endfor%}
+      </td>
+      <td>
+      {{"%0.4f" % distances[claim.id]}}
+      {%if user_can('confirm_claim') %}
+      <button name="set_diameter" onclick="action({{claim.id}}, 'diameter')">◌</button>
+      {%endif%}
+      </td>
+      {%if user_can('confirm_claim') %}
+      <td><button name="add" onclick="action({{claim.id}}, 'add')">➕</button></td>
+      <td><button name="add_to_here" onclick="action({{claim.id}}, 'add_up_to')">➜➕</button></td>
+      {%endif%}
+      <td><a href="{{claim.web_path(collection)}}">{{claim.id}}</a> {{claim.text}}</td>
+     </tr>
+     {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <h3>No nearby neighbours</h3>
+    {% endif %}
+<style>
+.claims button {
+  font-size: x-small;
+}
+.claims td, .claims th {
+  border: 1px solid #ccc;
+  vertical-align: top;
+}
+
+.relevance label,
+.relevance input {
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  display: inline;
+  width: 80px;
+  border: 1px solid #888;
+  padding-left: 1ex;
+  padding-right: 1ex;
+  margin: 0;
+  cursor: pointer;
+  color: #666;
+}
+
+.relevance input[type="radio"] {
+  display: none;
+}
+
+.relevance label:hover {
+  background: #DDD;
+}
+
+.relevance input[type="radio"]:checked + label {
+  background: yellow;
+  color: black;
+}
+
+.relevance {
+  border: 2px solid #222;
+}
+</style>
+<script>
+const neighbours = [
+  {% for claim in near_neighbours %}{{claim.id}},{%endfor%}
+  {% for claim in far_neighbours %}{{claim.id}},{%endfor%}
+];
+const distances = {{distances}};
+function action(target_id, target_action){
+  const form = document.cluster_form;
+  if (target_action == 'diameter') {
+    form.auto_include_diameter.value = distances[target_id];
+    return;
+  }
+  form.target_action.value = target_action;
+  if (target_action == 'add_up_to') {
+    form.target_id.value = String(neighbours.slice(0, neighbours.indexOf(target_id)+1))
+  } else {
+    form.target_id.value = target_id;
+  }
+  htmx.trigger(form, 'submit');
+}
+</script>
+</div>
+{% endblock %}

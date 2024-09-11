@@ -1,0 +1,60 @@
+// Custom.scss
+
+
+// Include any default variable overrides here
+$cm-blue: #008ab9;
+$cm-red: rgb(127, 49, 23);
+$cm-magenta: rgb(174, 93, 132);
+$cm-gold: rgb(174, 130, 64);
+$cm-light-gold: rgb(237, 227, 212);
+$back-color: rgb(243, 244, 246);
+$back-color0: rgb(229, 231, 235);
+$text-color: rgb(55, 65, 81);
+$back-text-color: white;
+$brand-underline: rgb(174, 130, 64);
+
+$body-color: $cm-blue;
+$body-bg: $back-color;
+$primary: $text-color;
+$primary-bg: $back-color;
+$secondary: $cm-blue;
+$secondary-bg: $back-color;
+$tertiary: $cm-gold;
+$tertiary-bg: $back-color;
+$table-color: $text-color;
+$heading-color: $cm-blue;
+$emphasis-color: $cm-gold;
+$navbar-dark-color: $back-text-color;
+$navbar-dark-active-color: $cm-light-gold;
+$navbar-dark-hover-color: $cm-gold;
+$nav-link-hover-color: $cm-gold;
+$pagination-padding-y: 0.1rem;
+$pagination-padding-x: 0.25rem;
+
+
+// $font-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+$font-sans-serif: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+$font-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+$font-serif: Georgia, Cambria, serif, Cochin, Times, "Times New Roman";
+$font-logo: "Voltaire", "Script";
+$body-font-family: $font-serif;
+$font-family-base: $font-serif;
+$danger: rgb(127, 49, 23);
+
+$logo-width: 102px;
+$logo-height: 102px;
+$logo-width-small: 80px;
+$logo-height-small: 80px;
+$logo-image: url("/static/claim_miner.png");
+
+@import "../node_modules/bootstrap/scss/bootstrap";
+@import "./custom";
+
+@font-face {
+  font-family: 'Voltaire';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/voltaire/v21/1Pttg8PcRfSblAvGvTovaqRFB_ie.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

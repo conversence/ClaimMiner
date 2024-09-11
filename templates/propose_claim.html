@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}
+Propose claim
+{% endblock %}
+{% block script_content %}
+function reframe(fragment_id) {
+  document.proposal['hx-post']=`/f{{collection.path}}/claim/${fragment_id}/add_related`;
+  htmx.trigger(document.proposal, 'submit');
+  return false;
+}
+function back_to_search() {
+  document.proposal['hx-post']="/f{{collection.path}}/claim/propose"
+  htmx.trigger(document.proposal, 'submit');
+}
+{% endblock %}
+{% block content %}
+<form hx-post="/f{{collection.path}}/claims/propose" id="proposal" name="proposal">
+  {{ macros.show_neighbourhood(claim_nghd, collection, 'reframe') }}
+  <p>
+  <label for="text">Add new claim:</label>
+  <input type="text" name="text" value="{{text}}" size="60"/>
+  <button type="button" onclick="back_to_search()">Back to search</button>
+  </p>
+  <p>
+  {{ macros.link_form_elements('{{node_type}}', 'freeform', false) }}
+  </p>
+  <button name="add" id="add" type="submit">Add</button>
+</form>
+{% endblock %}

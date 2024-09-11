@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build": "sass --embed-sources -s compressed scss/$(grep scss_file config.ini|cut -d '=' -f 2|xargs).scss static/css/style.css",
+    "watch": "sass --watch scss/$(grep scss_file config.ini|cut -d '=' -f 2|xargs).scss:static/css/style.css"
+  },
+  "devDependencies": {
+    "bootstrap":"~5.3",
+    "sass": "~1.78",
+    "@popperjs/core": "~2.11"
+  }
+}

@@ -1,0 +1,24 @@
+<div id="title" class="hidden">Claim Miner - {% block title %}{% endblock %}</div>
+<div id="collection-name" class="hidden">{{collection.name}}</div>
+<script>
+    {% block script_content %}
+    function loaded() {
+      setPagination('', '', false);
+    }
+    function onPaginate(direction) {}
+    {% endblock %}
+</script>
+<style>
+{% if collection %}
+.if-no-collection { display: none; }
+{% else %}
+.if-collection { display: none; }
+{% endif %}
+</style>
+{% if error %}
+<p style="color: red">{{error}}</p>
+{% endif %}
+{% if success %}
+<p style="color: green">{{success}}</p>
+{% endif %}
+{% block content %}{% endblock %}

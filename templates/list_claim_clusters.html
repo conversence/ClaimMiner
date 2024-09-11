@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Claim clusters{% endblock %}
+{% block content %}
+<div>
+<h1>Clusters for collection {{collection.name}}</h1>
+{% if total_num_claims == 0 %}
+<p>No claims, so no clusters to analyze!</p>
+{% else %}
+<p>{{ total_num_claims - num_outlier_claims }} / {{total_num_claims}} grouped in {{total_num_clusters}} clusters using {{cluster_analyses|length}} analyses</p>
+
+<ul>
+  {% for analysis in cluster_analyses %}
+  <li>
+    <a href="{{analysis.web_path(collection)}}">{{analysis.id}}</a>
+    {{num_clusters[analysis.id][1]}} claims in {{num_clusters[analysis.id][0]}} clusters
+    {% if 'created_by' in analysis.params %}
+      manual cluster by {{creators[analysis.params['created_by']]}}
+    {% else %}
+      {{analysis.params}}
+    {%endif%}
+  </li>
+  {% endfor %}
+</ul>
+<a href="{{collection.path}}/analysis/cluster/all">See all clusters</a><br/>
+<a href="{{collection.path}}/analysis/cluster/new">New cluster calculation</a>
+{% endif %}
+</div>
+{% endblock %}

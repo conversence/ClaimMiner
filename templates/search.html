@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}
+{% if theme %}
+Claim neighbourhood
+{% else %}
+Search
+{% endif %}
+{% endblock %}
+{% block script_content %}
+function maybe_send() {
+  {% if theme %}
+  htmx.trigger(document.search, 'submit');
+  {% else %}
+  if (document.search.text.value.length > 4) {
+    htmx.trigger(document.search, 'submit');
+  }
+  {% endif %}
+}
+{% if not is_proposal %}
+function set_mode() {
+  const lam_div = document.getElementById('lambda');
+  lam_div.className = (document.search.mode.value == 'mmr')?'':'hidden';
+  const model_div = document.getElementById('model_div');
+  model_div.className = (document.search.mode.value == 'text')?'hidden':'';
+  const search_for_div = document.getElementById('search_for_div');
+}
+function change_mode() {
+  set_mode();
+  maybe_send();
+}
+{%endif%}
+var selection = {{selection or []}};
+function setup() {
+  setPagination("{{prev}}", "{{next}}", {{(results or ()) | length}});
+  {% if not is_proposal %}
+  const lam_display = document.getElementById('lam_display');
+  const lam_slider = document.getElementById('lam_percent');
+  set_mode();
+  lam_slider.oninput = function() {
+    lam_display.innerHTML = String(lam_slider.value/100);
+  }
+  lam_slider.onmouseup = function() {
+    maybe_send()
+  }
+  {%endif%}
+  // in case of reload, the browser may keep checkboxes. Reapply.
+  const checkboxes = document.getElementsByClassName('fragmentCheck');
+  for (const cb of checkboxes) {
+    const id = Number.parseInt(cb.name.substr(7));
+    if (cb.checked && selection.indexOf(id)< 0) {
+      checkboxChange(cb);
+    }
+  }
+}
+var selection_changes = {};
+function reload_doc() {
+  const sel_changes_el = document.getElementById("selection_changes");
+  if (sel_changes_el)
+    sel_changes_el.value = JSON.stringify(selection_changes);
+
+  maybe_send();
+}
+function submit_action_form(form_name) {
+  const target = document["form_"+form_name];
+  if (target) {
+    target.selection_changes.value = JSON.stringify(selection_changes);
+  }
+  return true;
+}
+
+{% if results %}
+    var num_selections = {{selection|length}};
+    function checkboxChange(target) {
+      const id = target.name.substr(7);
+      selection_changes[id] = target.checked;
+      if (target.checked) {
+        num_selections += 1;
+      } else {
+        num_selections -= 1;
+      }
+      {# document.getElementById("analyze").disabled = (num_selections == 0); #}
+      evalNumFragments();
+    }
+    function loaded() {
+        setup();
+        {% if theme %}
+          evalNumFragments();
+        {% endif %}
+    }
+    function evalNumFragments() {
+      var checks = document.getElementById("numFragments");
+      checks.innerText = num_selections;
+    }
+    function onPaginate(direction) {
+      document.getElementById("selection_changes").value = JSON.stringify(selection_changes);
+      document.getElementById("offset").value = direction?{{next or "null"}}:{{prev or "null"}};
+      document.getElementById("reset_fragments").value = 'false';
+      htmx.trigger(document.search, 'submit');
+    }
+    function onAnalyze(analyzer) {
+      {% if theme %}
+      document.getElementById("selection_changes").value = JSON.stringify(selection_changes);
+      document.getElementById("reset_fragments").value = 'false';
+      var form = document.search;
+      form['hx-post'] = "/f{{theme.web_path(collection)}}/"+analyzer;
+      htmx.trigger(form, 'submit');
+      {%endif%}
+    }
+    function checkAll() {
+      const form = document.search;
+      var inputs = form.getElementsByClassName("fragmentCheck");
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].type == "checkbox" && !inputs[i].checked) {
+          inputs[i].checked = true;
+          checkboxChange(inputs[i]);
+        }
+      }
+    }
+    function uncheckAll() {
+      const form = document.search;
+      var inputs = form.getElementsByClassName("fragmentCheck");
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].type == "checkbox" && inputs[i].checked) {
+          inputs[i].checked = false;
+          checkboxChange(inputs[i]);
+        }
+      }
+    }
+{% else %}
+    function loaded() {
+      setup();
+    }
+{% endif %}
+{% if is_proposal %}
+  function add_unrelated() {
+    document.search['hx-post'] = "/f{{collection.path}}/claim";
+    htmx.trigger(document.search, 'submit');
+  }
+  function add_related(fragment_id) {
+    document.search['hx-post'] = `/f{{collection.path}}/claim/${fragment_id}/add_related`;
+    htmx.trigger(document.search, 'submit');
+  }
+{% endif %}
+{% endblock %}
+{% block content %}
+<form id="search" name="search"
+{% if is_proposal %}
+hx-post="/f{{collection.path}}/claim/propose"
+{% else %}
+hx-post="/f{{collection.path}}/search"
+{% endif %}
+hx-target="#content">
+  {% if theme %}
+  Similar to claim: {{text}}
+  {% else %}
+  <label for="text">Text:</label>
+  <input type="text" name="text" value="{{text}}" size="60"/>
+  {% endif %}
+  {% if not is_proposal %}
+  <br/>
+  <label for="mode">Search type:</label> <select name="mode" onchange="change_mode()">
+    {% if not theme %}
+    <option {% if mode == "text" %}selected{% endif %} value="text">text search</option>
+    {% endif %}
+    <option {% if mode == "semantic" %}selected{% endif %} value="semantic">semantic search</option>
+    <option {% if mode == "mmr" %}selected{% endif %} value="mmr">MMR search</option>
+  </select><br/>
+  <div id="lambda" >
+    Lambda: <input id="lam_percent" name="lam_percent" value="{{lam*100}}" type="range" min="0" max="100"></input> <span id="lam_display">{{lam}}</span>
+  </div>
+  <div id="model_div">
+    <label for="model">Model:</label> <select id="model" name="model" onchange="maybe_send()">
+      {%for model_id in models %}
+      <option {% if model_id == model.name %}selected{% endif %} value="{{model_id}}">{{model_names[model_id]}}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div id="search_for_div">
+  Search in: <input type="checkbox" name="claim" id="claim"
+  {%if include_claims %}checked{% endif %} onclick="reload_doc()"
+  > Claims</input>, <input type="checkbox" name="paragraph" id="paragraph"
+  {%if include_paragraphs %}checked{% endif %} onclick="reload_doc()"
+  > Paragraphs</input>, <input type="checkbox" name="sentence" id="sentence"
+  {%if include_sentences %}checked{% endif %} onclick="reload_doc()"
+  > Sentences</input>.
+  <div>
+  {% if include_claims %}
+  <input type="checkbox" id="show_quotes" name="show_quotes" {%if show_quotes %}checked{% endif %} onclick="reload_doc()">Show quotes</input>
+  <input type="checkbox" id="only_with_quote" name="only_with_quote" {%if only_with_quote %}checked{% endif %} onclick="reload_doc()">Require quotes</input>
+  <input type="checkbox" id="group_by_cluster" name="group_by_cluster" {%if group_by_cluster %}checked{% endif %} onclick="reload_doc()">Group by cluster</input>
+  {% endif %}
+  {% if not include_claims %}
+  <input type="checkbox" id="one_per_doc" name="one_per_doc" {%if one_per_doc %}checked{% endif %} onclick="reload_doc()"> One per document</input>
+  {% endif %}
+  {% if not (include_paragraphs or include_sentences) %}
+  <input type="checkbox" id="one_per_cluster" name="one_per_cluster" {%if one_per_cluster %}checked{% endif %} onclick="reload_doc()"> One per cluster</input>
+  {% endif %}
+  </div>
+  {% endif %}
+  </div>
+    <img class="htmx-indicator" src="/static/loading.gif">
+
+  {% if not results %}
+  <button type="submit" value="Search">Search</button>
+  {% endif %}
+  {% if is_proposal %}
+  <br/>
+  {{macros.select_node_type('standalone_generic')}}
+  <button type="button" onclick="add_unrelated()">Add without relations</button>
+  {% endif %}
+  {% if results %}
+  <input type="hidden" name="offset" id="offset" value="{{offset}}"/>
+  <input type="hidden" name="limit" value="{{limit}}"/>
+  <input type="hidden" name="relate_to" value=""/>
+  <input type="hidden" name="selection_changes" id="selection_changes" value="{}"/>
+  <input type="hidden" id="reset_fragments" name="reset_fragments" value="true"/>
+  <ol start={{offset+1}}>
+    {% for result in results %}
+        {% if (not loop.first) and loop.previtem.cluster_id and (result.cluster_id != loop.previtem.cluster_id) %}
+          </ol>
+        </li>
+        {% endif %}
+        <li>
+        {%if result.cluster_id and (loop.first or (result.cluster_id != loop.previtem.cluster_id)) %}
+          <a href="{{collection.path}}/analysis/cluster/{{result.cluster_analysis}}/{{result.cluster_id}}">Cluster {{result.cluster_id}}</a>
+          <ol>
+          <li>
+        {% endif %}
+        {% if result.target.doc_id %}
+          <input type="checkbox" class="fragmentCheck" name="select_{{result.target.id}}" onchange="checkboxChange(this)" title="{{result.rank}}"
+            {% if result.target.id in selection %}checked{% endif %}/>
+        {% endif %}
+        <small>{{"%0.4f" % result.rank}}</small>
+        {% if is_proposal %}
+        <button type="button" onclick="add_related({{result.target.id}})">Relate to</button>
+        {% endif %}
+        {% if result.uri %}
+          {% if result.target.doc_id %}
+            <a href="{{result.target.web_path(collection)}}">{{result.title or result.uri}}</a><br/>
+          {%else%}
+            {{result.uri}}
+            <form hx-post="/f{{collection.path}}/document/upload" hx-target="#content">
+            <input type="hidden" name="url" value="{{result.uri}}"/>
+            <input type="hidden" name="quote_text" value="{{result.target.text}}"/>
+            <input type="hidden" name="upload_type" value="single"/>
+            <button name="add_result">Add document</button>
+            </form>
+          {%endif%}
+        {% else %}
+          [<a href="{{result.target.web_path(collection)}}">{{fragment_type_names[result.target.scale]}}</a>]
+        {% endif %}
+        <cite class="paragraph">{{result.target.text}}</cite>
+        {% if result.key_point %}
+          <br/><b>Variant of</b> the following from <a href="{{result.key_point.web_path(collection)}}">{{result.key_point_doc_title or result.key_point_doc_url}}</a>:
+          <cite class="claim">{{result.key_point.text}}</cite>
+        {% endif %}
+        {% if result.quote %}
+          <br/><b>Extracted from</b>: <a href="{{result.quote.web_path(collection)}}">{{result.quote_doc_title or result.quote_doc_url}}</a><br/>
+          <cite class="paragraph">{{result.quote.text}}</cite>
+        {% endif %}
+        {%if loop.last and result.cluster_id%}
+          </li>
+        </ol>
+        {%endif%}
+      </li>
+    {% endfor %}
+  </ol>
+  {% if not is_proposal %}
+  {% if (include_paragraphs or include_sentences or theme) %}
+  <div>
+    <button type="button" value="checkAll" onclick="checkAll()">Check all</button>
+    <button type="button" value="uncheckAll" onclick="uncheckAll()">Uncheck all</button>
+  </div>
+  <input type="hidden" name="theme_id" value="{{theme.id}}"/>
+  <div>
+    <p>Analyze <span id="numFragments"></span> fragments</p>
+  </div>
+  {% endif %}
+  {% endif %}
+{% endif %}
+</form>
+
+{% if theme and (include_paragraphs or include_sentences) and not is_proposal %}
+{{ macros.task_list(tasks or [], '', theme, collection) }}
+{% endif %}
+
+{% endblock %}

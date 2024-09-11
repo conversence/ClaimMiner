@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}Task template {{template.nickname}}{% endblock %}
+{% block content %}
+<div>
+  <form hx-post="/f{{collection.path}}/analyzer/{{analyzer.name}}/template/{{template.nickname}}" hx-target="#content">
+  <p>
+    <label for="nickname">Template name:</label>
+    {%if can_edit%}
+    <input type="text" name="nickname" id="nickname" value="{{template.nickname}}"/>
+    {%else%}
+    {{template.nickname}}
+    {%endif%}
+  </p>
+  {%if collection%}
+  <p>in collection {{collection.name}}</p>
+  {%endif%}
+  {% block template_form %}
+  {% endblock %}
+  <p>
+    <input type="checkbox" name="draft" id="draft"
+      {% if template.draft %}checked{% endif %}
+      {% if not can_edit %}disabled{%endif%}>
+    <label for="draft">keep editing</label>
+      {% if user_can('admin') and not template.draft %}
+      <input type="checkbox" name="force_edit"
+      {%if force_edit %}checked{%endif%}>
+      <label for="draft">Force editing</label>
+      {% endif %}
+  </p>
+
+
+  <button type="submit">Ok</button>
+  </form>
+  {% if fragment_count > 0 %}
+    <p>Used to create {{fragment_count}} fragments in {{analysis_count}} analyses
+     {% if template.draft %}despite being a draft {%endif%}</p>
+  {% else %}
+  <p>Not used yet</p>
+  {% endif %}
+
+  <a href=".">All templates</a>
+{% endblock %}

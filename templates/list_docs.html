@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+<div>
+  {% if user_can("add_document") %}
+  <p><a href="{{collection.path}}/document/upload">Upload new documents</a></p>
+  {% endif %}
+  <ol start="{{offset+1}}">
+    {% for doc in docs %}
+      <li>
+        <a href="{{doc.web_path(collection)}}">{{doc.title or doc.url}}</a>
+        <a href="{{doc.url}}" target="_blank">link</a>
+        {% if doc.return_code == 200 %}
+          <a href="{{doc.web_path(collection)}}/raw">file</a>
+          {% if doc.text_identity %}
+            (<a href="{{doc.web_path(collection)}}/text">text</a>: {{(doc.text_size or 0) // 1024}} Kb)
+          {% endif %}
+          {{num_paras[doc.id]}} paragraphs
+          {% if num_generated[doc.id] %}
+          , <b>{{num_generated[doc.id]}} claims</b>
+          {%endif%}
+        {% elif doc.load_status == "not_loaded" %}
+          (not loaded)
+        {% else %}
+          (error: {{doc.return_code}})
+        {% endif %}
+      </li>
+      {% else %}
+      <li>No document yet</li>
+    {% endfor %}
+  </ol>
+</div>
+{% endblock %}
+{% block script_content %}
+  function loaded() {
+    setPagination("{{prev}}", "{{next}}", {{docs|length}});
+  }
+  function onPaginate(direction) {}
+{% endblock %}

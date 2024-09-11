@@ -1,0 +1,106 @@
+[project]
+name = "ClaimMiner"
+version = "0.1.1"
+description = "Tool to curate claims extracted from documents"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Marc-Antoine Parent", email = "maparent@conversence.com" }
+]
+license = "Apache-2.0"
+dependencies = [
+  "aiokafka",
+  "angle-emb",
+  "asyncpg",
+  # "asyncpg-listen",
+  "beautifulsoup4",
+  "bitsandbytes; sys_platform=='linux'",
+  "bitsandbytes==0.42.0; sys_platform=='darwin'",
+  "en_core_web_trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3-py3-none-any.whl",
+  "fastapi",
+  "fastapi-oauth2",
+  "frozendict",
+  "google-cloud-bigquery",
+  "google-api-python-client",
+  "gunicorn",
+  "hashfs",
+  "httpx",
+  # "httpx_ws",
+  "isodate",
+  "itsdangerous",  # Why not automatic?
+  "keras",
+  "python-jose",
+  "python-multipart",  # Why not automatic?
+  "Levenshtein",
+  "langchain",  # TODO: remove
+  "langchain-community",  # TODO: remove
+  "llama-index",
+  "lxml",
+  "onnxruntime",
+  "orjson",
+  "passlib",
+  "pdfx",
+  "pgvector",
+  "pluggy",
+  "pyisemail",
+  "pygraphviz; sys_platform != 'darwin'",
+  "pygraphviz @ https://idealoom.org/wheelhouse/pygraphviz-1.13-cp311-cp311-macosx_14_0_arm64.whl ; sys_platform=='darwin'",
+  "redis",  # TODO: remove
+  "rdflib",
+  "scikit-learn",
+  "selenium",
+  "spacy>3.7,!=3.7.6",
+  "sqlmodel",
+  "tensorflow-hub",
+  "tensorflow-text; sys_platform != 'darwin'",
+  "tensorflow-text @ https://github.com/sun1638650145/Libraries-and-Extensions-for-TensorFlow-for-Apple-Silicon/releases/download/v2.17/tensorflow_text-2.17.0-cp311-cp311-macosx_11_0_arm64.whl#sha256=f0a7225a1242f06e4d206235f56025a0f70fb9a2e3ecb85bd5ba686269e74c16 ; sys_platform == 'darwin'",
+  "types-beautifulsoup4",
+  "types-passlib",
+  "types-psycopg2",
+  "types-python-jose",
+  "types-pytz",
+  "types-PyYAML",
+  "types-requests",
+  "unstructured",
+  "uvicorn",
+  "Werkzeug",
+]
+
+[project.optional-dependencies]
+test = [
+  "asgi-lifespan",
+  "pytest-asyncio",
+  "pytest",
+]
+docs = [
+  "Sphinx",
+  "sphinx-issues"
+]
+dev = [
+  "ipython",
+  "pipdeptree",
+]
+
+[project.scripts]
+initial_setup = "claim_miner.scripts.initial_setup:main"
+db_updater = "claim_miner.scripts.db_updater:main"
+claim_miner_web = "claim_miner.app_full:main"
+claim_miner_events = "claim_miner.tasks.kafka:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["claim_miner"]
+
+[tool.pytest.ini_options]
+markers = [
+    "cost: marks tests as involving tool costs (deselect with '-m \"not cost\"')",
+]
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"

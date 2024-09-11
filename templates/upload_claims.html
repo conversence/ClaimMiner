@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Upload Statements{% endblock %}
+{% block content %}
+<div>
+  {% if user_can("add_claim") %}
+  <div>
+    <form hx-post="/f{{collection.path}}/claim/upload" hx-target="#content" id="add_claims_csv" enctype="multipart/form-data">
+      <p>
+        <label for="file">Choose CSV file to upload</label>
+        <input type="file" name="file" accept=".csv" required/>
+      </p>
+      <p>
+        <label for="column">Column number with the statement</label>
+        <input type="number" name="column" min="1" required/>
+      </p>
+      <p>
+        <label for="skip">Skip first row</label>
+        <input type="checkbox" name="skip" checked/>
+      </p>
+      <p>
+        <label for="node_type">Statement type:</label>
+        <select name="node_type">
+          {% for k,v in fragment_type_names.items() %}
+          <option value="{{k.name}}">{{v}}</option>
+          {%endfor%}
+        </select>
+      </p>
+      <button type="submit" value="Upload">Upload CSV</button>
+    </form>
+  </div>
+  {% else %}
+  Missing permission: add_claim
+  {% endif %}
+</div>
+{% endblock %}

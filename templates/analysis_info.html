@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% import 'macros.html' as macros %}
+{% block title %}
+Analysis results
+{% endblock %}
+<script>
+function export_claim(pos) {
+  document.analysis.exporting.value=pos;
+  htmx.trigger(document.analysis, 'submit');
+}
+</script>
+{% block content %}
+  <h1>Analysis {{analysis.task_template_nickname or analyzer.name}} ({{analysis.status.name}}){{ macros.wait_for_analysis(analysis) }}</h1>
+  {% if can_trigger and analysis.status > process_status.not_ready and analysis.status != process_status.ongoing and (analysis.status!= process_status.complete or task.can_reapply_complete) %}
+  <form hx-post="/f{{analysis.web_path(collection)}}" hx-target="#content">
+    <button name="launch">Launch task</button>
+  </form>
+  {%endif%}
+
+  {% if analysis.part_of %}
+    <p>
+      Sub analysis of <a href="{{collection.path}}/analysis/{{analysis.part_of.id}}">analysis {{analysis.part_of.id}}</a>
+    </p>
+  {% endif %}
+  {% if analysis.has_parts %}
+  Sub-analyses:
+  <ul>
+    {% for ana in analysis.has_parts %}
+    <li><a href="{{ana.web_path(collection)}}">analysis {{ana.id}}</a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if analysis.params or (task_template and task_template.params) %}
+  <input id="show_analyzer" type="checkbox" onchange="toggle_div('analyzer')"/> <label id="show_analyzer_label" for="show_analyzer">parameters</label>
+  <div id="analyzer" class="hidden">
+    <code>{{analysis.params|safe}}</code>
+    {%if task_template %}
+    <p>task template {{task_template.nickname}}:</p>
+    <code>{{task_template.params|safe}}</code>
+    {%endif%}
+  </div>
+  {% endif %}
+  {% if theme %}
+    <p><label>Theme {{theme.type_name}}: </label> {{theme.text}}</p>
+  {% endif %}
+<form id="analysis" name="analysis" hx-post="/f{{analysis.web_path(collection)}}" hx-target="#content">
+  <input type="hidden" name="continuation" value="true"/>
+  <input type="hidden" name="saving" value=""/>
+  <input type="hidden" name="exporting" value=""/>
+  {% if target_nghd %}
+  {{ macros.show_neighbourhood(target_nghd, collection, '') }}
+  {% endif %}
+  {% if result_nodes %}
+  <div id="output">
+    <h3>Analysis output:</h3>
+    <ol>
+    {% for node in result_nodes.values() %}
+      <li>
+        {%if node.type.name == 'document' %}
+          Document <a href="{{node.web_path(collection)}}">{{node.title or node.url}}</a>
+        {%elif node.type.name == 'standalone' %}
+           Statement <a href="{{node.web_path(collection)}}">{{node.id}}</a>: {{ node.text}}
+        {% elif node.type.name == 'fragment' %}
+          {% if node.scale.name == 'quote' %}
+            Quote from <a href="{{node.web_path(collection)}}">paragraph {{node.position}} of {{node.doc_id}}</a>: {{ node.text}}
+          {% else %}
+            <a href="{{node.web_path(collection)}}">paragraph {{node.position}} of {{node.doc_id}}</a>: {{ node.text}}
+          {% endif %}
+        {% elif node.type.name == 'link' %}
+        <a href="{{node.target_topic.web_path(collection)}}">{{node.target}}</a> &lt;--[{{ link_type_names[node.link_type]}}]-- <a href="{{node.source_topic.web_path(collection)}}">{{node.source}}</a>
+        {% endif %}
+      </li>
+    {%endfor%}
+    </ol>
+  </div>
+  {%endif%}
+
+  {% if analysis.results %}
+  <div id="results_outer">
+  <h3>Result data</h3>
+  <p><input id="show_results" type="checkbox" onchange="toggle_div('results')"><label for="show_results">Show</label></p>
+  <code id="results" class="hidden"><pre>{{analysis.results|tojson(indent=2)}}</pre></code>
+  </div>
+  {% endif %}
+
+  {% if fragments %}
+  <div id="context">
+    <h3>Analysis context:</h3>
+    <ol>
+    {% for node in fragments.values() %}
+      <li>
+        (<a href="{{node.web_path(collection)}}">paragraph {{node.position}} of {{node.doc_id}}</a>) {{ node.text}}
+      </li>
+    {%endfor%}
+    </ol>
+  </div>
+  {%endif%}
+
+  {% if dependent_tasks %}
+  <div id="dependent_tasks">
+    <h3>Analyses that depend on this one:</h3>
+    <ul>
+      {% for dtask in dependent_tasks %}
+      <li>
+        <a href="{{dtask.analysis.web_path(collection)}}">{{dtask.name}} {%if dtask.analysis.id %}{{dtask.analysis.id}}{% endif %}</a>
+      </li>
+      {%endfor%}
+    </ul>
+  </div>
+  {% endif %}
+</form>
+  {% if user_can('admin') and analysis.status.name == 'complete' and task.can_delete_results %}
+  <form hx-post="/f{{analysis.web_path(collection)}}" hx-target="#content">
+    <button name="delete_results">Delete all results</button>
+  </form>
+  {% endif %}
+
+{% endblock %}

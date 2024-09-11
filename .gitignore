@@ -1,0 +1,27 @@
+__pycache__
+*.pyc
+*.ini
+postgrest_*.conf
+files
+
+.DS_Store
+
+# Google Credentials
+credentials*.json
+
+# Generated Files
+*.egg-info
+.venv
+doc/_build
+doc/autodoc
+
+# Logs
+events.log
+web.log
+logs
+
+# Node Modules
+node_modules
+
+# personal files
+.personal

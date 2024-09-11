@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Task Templates{% endblock %}
+{% block content %}
+{% if all_analyzers %}
+  {%if collection %}
+  <h1>Templates in collection {{collection.name}}</h1>
+  {%else%}
+  <h1>Global templates</h1>
+  {%endif%}
+{% else %}
+  {% for analyzer in analyzers.values() %}
+    {%if collection %}
+    <h1>Templates for analyzer {{analyzer.name}} in collection {{collection.name}}</h1>
+    {%else%}
+    <h1>Global templates for analyzer {{analyzer.name}}</h1>
+    {%endif%}
+  {% endfor %}
+{%endif%}
+<div>
+
+{% for analyzer_id, analyzer_templates in templates.items() %}
+  {% set analyzer = analyzers[analyzer_id] %}
+  {% if all_analyzers %}
+    {%if collection %}
+    <h2>for analyzer {{analyzer.name}}</h2>
+    {%else%}
+    <h2>for analyzer {{analyzer.name}}</h2>
+    {%endif%}
+  {%endif%}
+  <ol>
+    {% for template in analyzer_templates %}
+      <li><a href="{{template.web_path(collection)}}">{{template.nickname}}</a><br/>
+        <p class="small_template">
+          {{template.params['template']}}
+        </p>
+      </li>
+    {% else %}
+      <li>No template yet</li>
+    {% endfor %}
+  </ol>
+{%if can_edit[analyzer_id] %}
+<form hx-post="/f{{collection.path}}/analyzer/{{analyzer.name}}/template" hx-target="#content">
+  <input type="text" name="nickname"/>
+  <button type="submit">Add {{analyzer.name}} template</button>
+</form>
+{% endif %}
+{% endfor %}
+</div>
+{% endblock %}
