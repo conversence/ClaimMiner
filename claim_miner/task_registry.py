@@ -1166,7 +1166,7 @@ class TaskRegistry:
                         trigger.collection_id is None
                         or trigger.collection_id in collections_by_id.get(topic_id, [])
                     ):
-                        task_class = self.task_by_name(
+                        task_class = self.get_task_cls_by_name(
                             self.analyzer_by_id[trigger.target_analyzer_id].name
                         )
                         tasks.extend(
@@ -1567,7 +1567,7 @@ class TaskRegistry:
 
         async with Session() as session:
             analysis = await session.get(
-                Analysis, analysis_id, options=[joinedload(Analysis.collection)]
+                Analysis, analysis_id, options=[joinedload(Analysis.collection), joinedload(Analysis.task_template)]
             )
             if analysis:
                 if analysis.task_template_id:

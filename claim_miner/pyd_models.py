@@ -576,7 +576,7 @@ class AnalysisModel(BaseModel):
             # theme_id also?
             from .task_registry import TaskRegistry
 
-            task = TaskRegistry.get_registry().get_task_cls_by_name.get(analyzer_name)
+            task = TaskRegistry.get_registry().get_task_cls_by_name(analyzer_name)
             if task.task_scale:
                 return f"{collection_path}/{task.task_scale[0].name}/{self.target_id}/analysis/{analyzer_name}"
         return f"{collection_path}/analysis/{analyzer_name}"
