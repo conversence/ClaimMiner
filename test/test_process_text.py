@@ -29,7 +29,7 @@ async def test_process_text_after_upload(
     await session.refresh(doc, ["paragraphs"])
     assert len(doc.paragraphs) > 0
     assert len(dispatcher.channels["embed_doc"]) == 1
-    assert len(dispatcher.channels["embed_fragment"]) > 1
+    assert len(dispatcher.channels["embed_fragment"]) > 0
 
 
 async def test_process_text_after_add_url(

@@ -33,10 +33,7 @@ async def sqla_engine(ini_file):
 
 @pytest.fixture(scope="session")
 def init_database(sqla_engine, ini_file):
-    import sys
-
-    sys.path.append("./scripts")
-    from db_updater import (
+    from claim_miner.scripts.db_updater import (
         get_connection_data,
         db_state,
         read_structure,
@@ -161,7 +158,7 @@ async def admin_user(clean_tables, client):
 
 @pytest.fixture(scope="function")
 async def admin_token(admin_user, client) -> str:
-    form = OAuth2PasswordRequestForm(username="admin", password="admin")
+    form = OAuth2PasswordRequestForm(username="admin", password="admin", grant_type='password')
     response = await client.post("/api/token", data=form.__dict__)
     assert response.status_code == 200, response.json()
     return response.json()["access_token"]
