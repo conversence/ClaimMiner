@@ -144,16 +144,16 @@ async def search(
     else:
         query = query.filter(neighbour.scale == scales[0])
 
-    claim_analyzer_id = (
-        TaskRegistry.get_registry().analyzer_by_name["extract_claims"].id
-    )
+    # claim_analyzer = (
+    #     TaskRegistry.get_registry().analyzer_by_name.get("extract_claims", None)
+    # )
     if only_with_quote:
         query = query.join(
             analysis_output_table, analysis_output_table.c.topic_id == neighbour.id
         ).join(
             Analysis,
             (analysis_output_table.c.analysis_id == Analysis.id)
-            & (Analysis.analyzer_id == claim_analyzer_id)
+            # & (Analysis.analyzer_id == claim_analyzer.id)
             & (Analysis.target.is_not(None)),
         )
 
@@ -289,8 +289,9 @@ async def search(
             .join(
                 Analysis,
                 (analysis_output_table.c.analysis_id == Analysis.id)
-                & (Analysis.analyzer_id == claim_analyzer_id),
-                isouter=isouter,
+                # & (Analysis.analyzer_id == claim_analyzer.id)
+                & Analysis.target.is_not(None),
+                isouter=isouter
             )
             .join(quote, Analysis.target, isouter=isouter)
         )

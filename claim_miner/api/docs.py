@@ -83,7 +83,9 @@ async def get_document_generated_claims(
 ) -> List[AnalysisModel]:
     registry = TaskRegistry.get_registry()
     # TODO: Generalize this code, use recursive queries
-    analyzer = registry.analyzer_by_name["extract_claims"]
+    analyzer = registry.analyzer_by_name.get("extract_claims", None)
+    if not analyzer:
+        raise NotFound("Claim extractor not found")
     async with Session() as session:
         q = select(Analysis.id).filter_by(target_id=doc_id, analyzer_id=analyzer.id)
         if collection:
