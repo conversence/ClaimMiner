@@ -26,6 +26,7 @@ from .. import Session, pyd_models, hashfs, escape_fn
 from ..task_registry import CMTask, CMTemplatedTask, hookimpl, TaskRegistry
 from ..llm import (
     processing_models,
+    DEFAULT_MODEL,
     parsers_by_name,
     parser_type,
     processing_model_from_name,
@@ -838,11 +839,12 @@ class GdeltTask(CMTask[GdeltAnalysisModel]):
 
 
 class PromptTaskTemplateModel(TaskTemplateModel):
-    model: processing_models = processing_models.gpt_3_5_turbo_1106
+    model: processing_models = DEFAULT_MODEL
     parser: parser_type = parser_type.single_phrase
     link_type: pyd_models.link_type = pyd_models.link_type.freeform
     node_type: fragment_type = fragment_type.standalone
     backwards_link: bool = False
+    system_prompt: Optional[str] = None
     prompt: Optional[str] = None
 
     @field_validator("model", mode="before")

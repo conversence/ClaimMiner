@@ -85,12 +85,8 @@ class OpenAIEmbedder(AbstractEmbedder):
     @classmethod
     async def setup(cls):
         if cls.client is None:
-            from openai import AsyncOpenAI
-
-            cls.client = AsyncOpenAI(
-                api_key=config.get("openai", "api_key"),
-                organization=config.get("openai", "organization"),
-            )
+            from .llm import get_openai_client
+            cls.client = get_openai_client()
 
     @classmethod
     async def embed(cls, text: Union[str, List[str]]) -> NDArray[np.float32]:

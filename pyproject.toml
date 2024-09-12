@@ -32,8 +32,6 @@ dependencies = [
   "python-jose",
   "python-multipart",  # Why not automatic?
   "Levenshtein",
-  "langchain",  # TODO: remove
-  "langchain-community",  # TODO: remove
   "llama-index",
   "lxml",
   "onnxruntime",

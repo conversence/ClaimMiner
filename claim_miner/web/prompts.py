@@ -9,7 +9,6 @@ from fastapi import Request, Form, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import joinedload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
-from langchain.prompts import PromptTemplate
 
 from .. import Session, select
 from . import update_fragment_selection, get_base_template_vars, app_router
@@ -24,7 +23,7 @@ from ..models import (
 from ..pyd_models import fragment_type, link_type, process_status
 from ..app import BadRequest, NotFound, Unauthorized
 from ..auth import user_with_permission_c_dep
-from ..llm import get_base_llm, parsers_by_name, processing_models
+from ..llm import get_openai_client, parsers_by_name, processing_models
 from ..task_registry import TaskRegistry
 
 logger = getLogger(__name__)
@@ -80,23 +79,22 @@ async def analyze_prompt(
         statement = fragments.pop(statement_id)
 
     if use_fragments:
-        prompt_t = PromptTemplate(
-            input_variables=["theme", "fragments"],
-            template=prompt_template.params["prompt"],
-        )
         # partial_variables=dict(format_instructions=parser.get_format_instructions())
         fragment_texts = "\n\n".join(
             f"({id}): {f.text})" for (id, f) in fragments.items()
         )
-        prompt = prompt_t.format(theme=statement.text, fragments=fragment_texts)
+        prompt = prompt_template.prompt.format(theme=statement.text, fragments=fragment_texts)
     else:
-        prompt_t = PromptTemplate(
-            input_variables=["theme"], template=prompt_template.params["prompt"]
-        )
-        prompt = prompt_t.format(theme=statement.text)
+        prompt = prompt_template.prompt.format(theme=statement.text)
     logger.debug("%s", prompt)
-    llm = get_base_llm(model_name=model)  # temperature...
-    resp = await llm.ainvoke(prompt)
+    client = get_openai_client()  # temperature...
+    messages = [dict(role="user", prompt=prompt)]
+    if prompt_template.system_prompt:
+        messages = [dict(role="system", prompt=prompt_template.system_prompt)] + messages
+
+    resp = await client.beta.chat.completions.parse(
+        model=prompt_template.model.value,
+        messages = messages)
     result = resp.content
     logger.debug("%s", result)
     parser = parsers_by_name[prompt_template.params["parser"]]

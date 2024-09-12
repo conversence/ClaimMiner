@@ -6,24 +6,21 @@ from typing import List, Dict, Optional, Union, Literal
 import re
 from enum import Enum, StrEnum
 
-from redis import Redis
-import langchain
-from langchain_community.cache import RedisCache
-from langchain.schema import BaseOutputParser
-from langchain.globals import set_llm_cache
+from openai import OpenAI, AsyncOpenAI
 
-
-set_llm_cache(RedisCache(redis_=Redis(db=6)))
-
+from . import config
 
 class processing_models(Enum):
     gpt_4o = "gpt-4o"  # Currently gpt_4o_2024_05_13
+    gpt_4o_2024_08_06 = "gpt-4o-2024-08-06"
     gpt_4o_2024_05_13 = "gpt-4o-2024-05-13"
-    gpt_4_turbo = "gpt-4-turbo"  # Currently gpt_4_turbo_2024_04_09
+    gpt_4o_mini = "gpt-4o-mini"
+    gpt_4o_mini_2024_07_18 = "gpt-4o-mini-2024-07-18"
+    gpt_4_turbo = "gpt-4-turbo"  # Currently gpt-4-turbo-2024-04-09
     gpt_4_turbo_2024_04_09 = "gpt-4-turbo-2024-04-09"
+    gpt_4_turbo_preview = "gpt-4-turbo-preview"  # Currently gpt_4_0125_preview
     gpt_4 = "gpt-4"  # Currently gpt_4_0613
     gpt_4_0613 = "gpt-4-0613"
-    gpt_4_turbo_preview = "gpt-4-turbo-preview"  # Currently gpt_4_0125_preview
     gpt_4_0125_preview = "gpt-4-0125-preview"
     gpt_4_1106_preview = "gpt-4-1106-preview"
     gpt_4_32K = "gpt-4-32k"  # Currently gpt-4-32k-0613
@@ -31,6 +28,7 @@ class processing_models(Enum):
     gpt_3_5_turbo = "gpt-3.5-turbo"  # Currently gpt_3_5_turbo_0125
     gpt_3_5_turbo_0125 = "gpt-3.5-turbo-0125"
     gpt_3_5_turbo_1106 = "gpt-3.5-turbo-1106"
+    gpt_3_5_turbo_instruct = "gpt-3.5-turbo-instruct"
     text_moderation_latest = "text-moderation-latest"  # Currently text_moderation_007
     text_moderation_stable = "text-moderation-stable"  # Currently text_moderation_007
     text_moderation_007 = "text-moderation-007"
@@ -40,6 +38,7 @@ class processing_models(Enum):
     gpt_3_5_turbo_16K = "gpt-3.5-turbo-16k"  # Currently gpt_3_5_turbo_16K_0613
     gpt_3_5_turbo_16K_0613 = "gpt-3.5-turbo-16k-0613"
     gpt_3_5_turbo_0613 = "gpt-3.5-turbo-0613"
+    gpt_4_turbo_0314 = "gpt-4-turbo-0314"
     # Obsolete
     gpt_3_5_turbo_0301 = "gpt-3.5-turbo-0301"
 
@@ -62,20 +61,29 @@ def processing_model_from_name(name: str) -> processing_models:
     raise ValueError(f"Unknown processing model: {name}")
 
 
-DEFAULT_MODEL = processing_models.gpt_3_5_turbo_0125
+DEFAULT_MODEL = processing_models.gpt_4o_mini_2024_07_18
+
+SCHEMA_CAPABLE_MODELS = {
+    processing_models.gpt_4o_mini_2024_07_18,
+    processing_models.gpt_4o_2024_08_06,
+}
+
+OPEN_AI_CLIENT = None
+
+def get_openai_client():
+    global OPEN_AI_CLIENT
+    if not OPEN_AI_CLIENT:
+        OPEN_AI_CLIENT = AsyncOpenAI(
+            api_key=config.get("openai", "api_key"),
+            organization=config.get("openai", "organization"),
+        )
+
+    # if isinstance(model_name, processing_models):
+    #     model_name = model_name.value
+    # return ChatOpenAI(model_name=model_name, n=2, temperature=temperature)
 
 
-def get_base_llm(
-    model_name: Union[processing_models, str] = DEFAULT_MODEL, temperature=0
-):
-    from langchain_openai import ChatOpenAI
-
-    if isinstance(model_name, processing_models):
-        model_name = model_name.value
-    return ChatOpenAI(model_name=model_name, n=2, temperature=temperature)
-
-
-class SinglePhraseParser(BaseOutputParser):
+class SinglePhraseParser():
     """Class to parse the output into a simple dictionary with text."""
 
     @property
@@ -88,7 +96,7 @@ class SinglePhraseParser(BaseOutputParser):
         return [dict(text=text.strip())]
 
 
-class BulletListParser(BaseOutputParser):
+class BulletListParser():
     """Class to parse the output into a list of dictionaries."""
 
     regex_pattern = re.compile(r"^\s*[-\+\*•]+\s+(.*)\s*$")
@@ -108,7 +116,7 @@ class BulletListParser(BaseOutputParser):
             raise ValueError("No answer")
 
 
-class BulletListWithRefsParser(BaseOutputParser):
+class BulletListWithRefsParser():
     """Class to parse the output into a list of dictionaries."""
 
     regex_pattern = re.compile(r"^\s*[-\+\*•]+\s+(.*)\s+\((\d+(,\s*\d+)*)\)\s*\.?\s*$")

@@ -3,12 +3,11 @@ from logging import getLogger
 
 from sqlalchemy.orm import joinedload, subqueryload, contains_eager
 from sqlalchemy.orm.attributes import flag_modified
-from langchain.prompts import PromptTemplate
 
 from .. import Session
 from ..pyd_models import process_status, fragment_type, link_type
 from ..models import Analysis, ClaimLink, Statement, Topic, with_polymorphic, select
-from ..llm import get_base_llm, parsers_by_name, processing_models
+from ..llm import get_openai_client, parsers_by_name, processing_models
 from .kafka import sentry_sdk
 from .tasks import (
     PromptAnalysisModel,
@@ -46,27 +45,26 @@ async def do_prompt_analysis(analysis_id: int):
 
         if analysis.analyzer_name == "fragment_prompt_analyzer":
             statement = analysis.theme
-            prompt_t = PromptTemplate(
-                input_variables=["theme", "fragments"], template=prompt_template
-            )
             # partial_variables=dict(format_instructions=parser.get_format_instructions())
             fragment_texts = "\n\n".join(
                 f"({f.id}): {f.text})" for f in analysis.context
             )
-            prompt = prompt_t.format(theme=statement.text, fragments=fragment_texts)
+            prompt = prompt_template.format(theme=statement.text, fragments=fragment_texts)
             target = analysis.theme
         else:
             statement = analysis.target
-            prompt_t = PromptTemplate(
-                input_variables=["theme"], template=prompt_template
-            )
-            prompt = prompt_t.format(theme=statement.text)
+            prompt = prompt_template.format(theme=statement.text)
             target = analysis.target
         collections = [analysis.collection] if analysis.collection_id else []
         logger.debug("%s", prompt)
-        llm = get_base_llm(model_name=task_template.model.value)  # temperature...
+        llm = get_openai_client()
+        messages = [dict(role="user", prompt=prompt)]
+        if task_template.system_prompt:
+            messages = [dict(role="system", prompt=task_template.system_prompt)] + messages
         try:
-            resp = await llm.ainvoke(prompt)
+            resp = await client.beta.chat.completions.parse(
+                model=prompt_template.model.value,
+                messages = messages)    # temperature...
         except Exception as e:
             logger.exception("", exc_info=e)
             if sentry_sdk:
