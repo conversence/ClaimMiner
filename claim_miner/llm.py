@@ -77,7 +77,7 @@ def get_openai_client():
             api_key=config.get("openai", "api_key"),
             organization=config.get("openai", "organization"),
         )
-
+    return OPEN_AI_CLIENT
     # if isinstance(model_name, processing_models):
     #     model_name = model_name.value
     # return ChatOpenAI(model_name=model_name, n=2, temperature=temperature)
