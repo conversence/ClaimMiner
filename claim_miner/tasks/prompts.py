@@ -49,7 +49,9 @@ async def do_prompt_analysis(analysis_id: int):
             fragment_texts = "\n\n".join(
                 f"({f.id}): {f.text})" for f in analysis.context
             )
-            prompt = prompt_template.format(theme=statement.text, fragments=fragment_texts)
+            prompt = prompt_template.format(
+                theme=statement.text, fragments=fragment_texts
+            )
             target = analysis.theme
         else:
             statement = analysis.target
@@ -60,11 +62,13 @@ async def do_prompt_analysis(analysis_id: int):
         llm = get_openai_client()
         messages = [dict(role="user", prompt=prompt)]
         if task_template.system_prompt:
-            messages = [dict(role="system", prompt=task_template.system_prompt)] + messages
+            messages = [
+                dict(role="system", prompt=task_template.system_prompt)
+            ] + messages
         try:
             resp = await client.beta.chat.completions.parse(
-                model=prompt_template.model.value,
-                messages = messages)    # temperature...
+                model=prompt_template.model.value, messages=messages
+            )  # temperature...
         except Exception as e:
             logger.exception("", exc_info=e)
             if sentry_sdk:

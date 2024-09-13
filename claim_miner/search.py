@@ -291,7 +291,7 @@ async def search(
                 (analysis_output_table.c.analysis_id == Analysis.id)
                 # & (Analysis.analyzer_id == claim_analyzer.id)
                 & Analysis.target.is_not(None),
-                isouter=isouter
+                isouter=isouter,
             )
             .join(quote, Analysis.target, isouter=isouter)
         )

@@ -10,6 +10,7 @@ from openai import OpenAI, AsyncOpenAI
 
 from . import config
 
+
 class processing_models(Enum):
     o1_preview_2024_09_12 = "o1-preview-2024-09-12"
     o1_preview = "o1-preview"  # Currently o1-preview-2024-09-12
@@ -75,6 +76,7 @@ SCHEMA_CAPABLE_MODELS = {
 
 OPEN_AI_CLIENT = None
 
+
 def get_openai_client():
     global OPEN_AI_CLIENT
     if not OPEN_AI_CLIENT:
@@ -88,7 +90,7 @@ def get_openai_client():
     # return ChatOpenAI(model_name=model_name, n=2, temperature=temperature)
 
 
-class SinglePhraseParser():
+class SinglePhraseParser:
     """Class to parse the output into a simple dictionary with text."""
 
     @property
@@ -101,7 +103,7 @@ class SinglePhraseParser():
         return [dict(text=text.strip())]
 
 
-class BulletListParser():
+class BulletListParser:
     """Class to parse the output into a list of dictionaries."""
 
     regex_pattern = re.compile(r"^\s*[-\+\*•]+\s+(.*)\s*$")
@@ -121,7 +123,7 @@ class BulletListParser():
             raise ValueError("No answer")
 
 
-class BulletListWithRefsParser():
+class BulletListWithRefsParser:
     """Class to parse the output into a list of dictionaries."""
 
     regex_pattern = re.compile(r"^\s*[-\+\*•]+\s+(.*)\s+\((\d+(,\s*\d+)*)\)\s*\.?\s*$")

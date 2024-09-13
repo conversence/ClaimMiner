@@ -86,6 +86,7 @@ class OpenAIEmbedder(AbstractEmbedder):
     async def setup(cls):
         if cls.client is None:
             from .llm import get_openai_client
+
             cls.client = get_openai_client()
 
     @classmethod

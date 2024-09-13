@@ -83,18 +83,22 @@ async def analyze_prompt(
         fragment_texts = "\n\n".join(
             f"({id}): {f.text})" for (id, f) in fragments.items()
         )
-        prompt = prompt_template.prompt.format(theme=statement.text, fragments=fragment_texts)
+        prompt = prompt_template.prompt.format(
+            theme=statement.text, fragments=fragment_texts
+        )
     else:
         prompt = prompt_template.prompt.format(theme=statement.text)
     logger.debug("%s", prompt)
     client = get_openai_client()  # temperature...
     messages = [dict(role="user", prompt=prompt)]
     if prompt_template.system_prompt:
-        messages = [dict(role="system", prompt=prompt_template.system_prompt)] + messages
+        messages = [
+            dict(role="system", prompt=prompt_template.system_prompt)
+        ] + messages
 
     resp = await client.beta.chat.completions.parse(
-        model=prompt_template.model.value,
-        messages = messages)
+        model=prompt_template.model.value, messages=messages
+    )
     result = resp.content
     logger.debug("%s", result)
     parser = parsers_by_name[prompt_template.params["parser"]]

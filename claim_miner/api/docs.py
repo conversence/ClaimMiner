@@ -257,13 +257,12 @@ async def get_document_fragment(
             raise NotFound()
         if fragment.doc_id != doc_id:
             raise BadRequest("Fragment does not belong to this document")
-        if request.url.path.split('/')[-2] == 'quotes':
+        if request.url.path.split("/")[-2] == "quotes":
             if fragment.scale != fragment_type.quote:
                 raise BadRequest("Not a quote")
         elif fragment.scale not in (fragment_type.paragraph, fragment_type.sentence):
             raise BadRequest("Not a paragraph")
         return fragment.as_model(session)
-
 
 
 @api_router.post("/c/{collection}/document/{doc_id}/quotes", status_code=201)

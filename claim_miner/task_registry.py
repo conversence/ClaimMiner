@@ -1567,7 +1567,12 @@ class TaskRegistry:
 
         async with Session() as session:
             analysis = await session.get(
-                Analysis, analysis_id, options=[joinedload(Analysis.collection), joinedload(Analysis.task_template)]
+                Analysis,
+                analysis_id,
+                options=[
+                    joinedload(Analysis.collection),
+                    joinedload(Analysis.task_template),
+                ],
             )
             if analysis:
                 if analysis.task_template_id:
