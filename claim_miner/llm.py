@@ -11,7 +11,12 @@ from openai import OpenAI, AsyncOpenAI
 from . import config
 
 class processing_models(Enum):
+    o1_preview_2024_09_12 = "o1-preview-2024-09-12"
+    o1_preview = "o1-preview"  # Currently o1-preview-2024-09-12
+    o1_mini_2024_09_12 = "o1-mini-2024-09-12"
+    o1_mini = "o1-mini"  # Currently "o1-mini-2024-09-12"
     gpt_4o = "gpt-4o"  # Currently gpt_4o_2024_05_13
+    gpt_4o_latest = "gpt-4o-latest"  # Currently gpt_4o_2024_05_13
     gpt_4o_2024_08_06 = "gpt-4o-2024-08-06"
     gpt_4o_2024_05_13 = "gpt-4o-2024-05-13"
     gpt_4o_mini = "gpt-4o-mini"
@@ -23,24 +28,18 @@ class processing_models(Enum):
     gpt_4_0613 = "gpt-4-0613"
     gpt_4_0125_preview = "gpt-4-0125-preview"
     gpt_4_1106_preview = "gpt-4-1106-preview"
-    gpt_4_32K = "gpt-4-32k"  # Currently gpt-4-32k-0613
-    gpt_4_32K_0613 = "gpt-4-32k-0613"
     gpt_3_5_turbo = "gpt-3.5-turbo"  # Currently gpt_3_5_turbo_0125
     gpt_3_5_turbo_0125 = "gpt-3.5-turbo-0125"
     gpt_3_5_turbo_1106 = "gpt-3.5-turbo-1106"
     gpt_3_5_turbo_instruct = "gpt-3.5-turbo-instruct"
+    gpt_3_5_turbo_instruct_0914 = "gpt-3.5-turbo-instruct-0914"
     text_moderation_latest = "text-moderation-latest"  # Currently text_moderation_007
     text_moderation_stable = "text-moderation-stable"  # Currently text_moderation_007
     text_moderation_007 = "text-moderation-007"
     davinci_002 = "davinci-002"
     babbage_002 = "babbage-002"
     # Legacy
-    gpt_3_5_turbo_16K = "gpt-3.5-turbo-16k"  # Currently gpt_3_5_turbo_16K_0613
-    gpt_3_5_turbo_16K_0613 = "gpt-3.5-turbo-16k-0613"
-    gpt_3_5_turbo_0613 = "gpt-3.5-turbo-0613"
     gpt_4_turbo_0314 = "gpt-4-turbo-0314"
-    # Obsolete
-    gpt_3_5_turbo_0301 = "gpt-3.5-turbo-0301"
 
 
 processing_models_legacy = {
@@ -49,6 +48,12 @@ processing_models_legacy = {
     "text-babbage-002": processing_models.babbage_002,
     "text-curie-001": processing_models.davinci_002,
     "text-ada-001": processing_models.babbage_002,
+    "gpt-3.5-turbo-16k-0613": processing_models.gpt_3_5_turbo,
+    "gpt-3.5-turbo-0613": processing_models.gpt_3_5_turbo,
+    "gpt-3.5-turbo-0311": processing_models.gpt_3_5_turbo,
+    "gpt-3.5-turbo-16k": processing_models.gpt_3_5_turbo,
+    "gpt-4-32k": processing_models.gpt_4,
+    "gpt-4-32k-0613": processing_models.gpt_4,
 }
 # Those are legacy names, not legacy models.
 
