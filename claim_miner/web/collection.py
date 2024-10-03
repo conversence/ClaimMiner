@@ -12,14 +12,13 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.sql.functions import count
 
 from .. import Session, select, as_bool
-from ..pyd_models import permission, embedding_model, topic_type
+from ..pyd_models import permission, embedding_model, topic_type, BASE_EMBED_MODEL
 from ..models import (
     TopicCollection,
     Statement,
     Collection,
     CollectionPermissions,
     Topic,
-    BASE_EMBED_MODEL,
 )
 from ..app import BadRequest
 from ..auth import active_user_c_dep, user_with_coll_permission_c_dep

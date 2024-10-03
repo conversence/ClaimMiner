@@ -1,9 +1,7 @@
 """
 Extract metadata from a HTML file.
 Translated from `Hypothesis client code<https://github.com/hypothesis/client/blob/main/src/annotator/integrations/html-metadata.ts>`_
-"""
 
-"""
 This translation to Python is Copyright 2024 Conversence and SocietyLibrary,
 under the same terms as the original copyright notice below:
 
@@ -27,6 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
+
 from contextlib import suppress
 from dataclasses import dataclass
 from collections import defaultdict

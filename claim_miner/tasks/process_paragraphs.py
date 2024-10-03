@@ -1,6 +1,7 @@
 from typing import List, Union, Tuple, Dict, Optional
 from ..utils import find_relative_position
-from ..models import Document, Fragment, fragment_type
+from ..pyd_models import fragment_type
+from ..models import Document, Fragment
 
 
 async def store_processed_para_data(

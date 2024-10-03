@@ -10,14 +10,15 @@ from sqlalchemy import update, select, BigInteger
 from sqlalchemy.sql.functions import count, func
 from sqlalchemy.orm import joinedload, subqueryload
 
+from .pyd_models import (
+    uri_status,
+)
 from .models import (
     UriEquiv,
     Fragment,
     Document,
     Analysis,
     analysis_context_table,
-    aliased,
-    uri_status,
 )
 from . import Session, hashfs
 from .uri import normalize

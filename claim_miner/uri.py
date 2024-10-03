@@ -60,9 +60,8 @@ possible if we can answer two questions:
 This package is responsible for defining URI normalization routines for use
 elsewhere in the Hypothesis application. URI expansion is handled by
 :py:func:`h.storage.expand_uri`.
-"""
 
-"""
+
 Subject to the original copyright notice:
 
 Copyright (c) 2013-2019 Hypothes.is Project and contributors
@@ -88,7 +87,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-
 
 import re
 from urllib.parse import (

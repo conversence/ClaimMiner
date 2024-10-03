@@ -20,7 +20,8 @@ from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 
 from .. import Session, hashfs, config
-from ..models import Document, UriEquiv, uri_status
+from ..pyd_models import uri_status
+from ..models import Document, UriEquiv
 from .kafka import sentry_sdk
 from .tasks import DownloadTask
 

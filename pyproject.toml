@@ -102,3 +102,8 @@ markers = [
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.ruff.lint.per-file-ignores]
+"claim_miner/models/__init__.py" = ["E402"]
+"claim_miner/api/__init__.py" = ["E402"]
+"claim_miner/web/__init__.py" = ["E402"]

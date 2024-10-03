@@ -161,4 +161,4 @@ async def validation_exception_handler(request, exc):
 
 
 # Import now to install the last middelware befere the app starts
-import claim_miner.auth
+import claim_miner.auth  # noqa: E402

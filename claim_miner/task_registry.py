@@ -93,8 +93,6 @@ class CMTask(ABC, Generic[T]):
 
     @classproperty
     def create_tasks_with_status(cls):
-        from .pyd_models import process_status
-
         return process_status.pending
 
     @classmethod
@@ -151,8 +149,6 @@ class CMTask(ABC, Generic[T]):
         return analyzer.id
 
     async def delete_results(self, session):
-        from .pyd_models import process_status
-
         if not self.can_delete_results:
             raise NotImplementedError()
         # Default implementation
@@ -165,7 +161,6 @@ class CMTask(ABC, Generic[T]):
         analysis.results = {}
 
     async def before_run(self):
-        from .pyd_models import process_status
         from .models import Session, Analysis
 
         if not self.analysis.id:
@@ -213,7 +208,6 @@ class CMTask(ABC, Generic[T]):
     @classmethod
     async def filter_not_done(cls, ids, **params):
         from . import Session
-        from .pyd_models import process_status
 
         with Session() as session:
             for id_ in ids:
@@ -226,8 +220,6 @@ class CMTask(ABC, Generic[T]):
 
     @classmethod
     async def status_for(cls, session, target_id, **params) -> process_status:
-        from .pyd_models import process_status
-
         return process_status.not_requested
 
     @classmethod
@@ -301,7 +293,6 @@ class CMTask(ABC, Generic[T]):
             Collection,
             Analyzer,
             TaskTemplate,
-            process_status,
             poly_type_clause,
             TopicCollection,
             Fragment,
@@ -402,7 +393,6 @@ class CMTask(ABC, Generic[T]):
     async def batch_tasks(cls, ids, check=True, **kwargs):
         # Obsolete code. Rewrite in bulk_tasks
         from . import Session
-        from .pyd_models import process_status
 
         async with Session() as session:
             # TODO: Maybe instead build the batch according to data size?
@@ -520,7 +510,7 @@ class CMTask(ABC, Generic[T]):
         nickname: Optional[str] = None,
         collection_name: Optional[str] = None,
     ) -> List[AnalysisModel]:
-        from .pyd_models import AnalysisModel, process_status, topic_type
+        from .pyd_models import AnalysisModel, topic_type
 
         params = params or {}
         collection_name = collection_name or params.pop("collection_name", None)
@@ -559,8 +549,6 @@ class CMTask(ABC, Generic[T]):
         collection_name: Optional[str] = None,
         task_template: Optional[TaskTemplateModel] = None,
     ) -> process_status:
-        from .pyd_models import process_status
-
         analyses = await cls.analyses_for(
             session, target_id, params, collection_name=collection_name
         )
@@ -640,7 +628,6 @@ class CMTask(ABC, Generic[T]):
             Analysis,
             Topic,
             with_polymorphic,
-            process_status,
         )
 
         if task.status == process_status.error:
@@ -889,8 +876,6 @@ class CMTemplatedTask(CMTask[T], Generic[T, U]):
         collection_name: Optional[str] = None,
         task_template: Optional[U] = None,
     ) -> process_status:
-        from .pyd_models import process_status
-
         analyses = await cls.analyses_for(
             session, target_id, params, nickname, collection_name, task_template
         )
@@ -907,8 +892,6 @@ class CMTemplatedTask(CMTask[T], Generic[T, U]):
         nickname: Optional[str] = None,
         collection_name: Optional[str] = None,
     ) -> List[AnalysisModel]:
-        from .pyd_models import AnalysisModel, process_status, topic_type
-
         params = params or {}
         nickname = nickname or params.pop("nickname", None)
         task_template = await cls.ensure_task_template_cls(session, params, nickname)
@@ -1183,7 +1166,6 @@ class TaskRegistry:
             await task.schedule()
 
     async def trigger_task_on_task_end(self, task: CMTask):
-        from .pyd_models import process_status
         from .models import Collection, Session, TaskTrigger, Analysis, Topic
 
         analysis_model: AnalysisModel = task.analysis
@@ -1358,7 +1340,6 @@ class TaskRegistry:
 
     async def trigger_task_on_task_error(self, task: CMTask):
         if task.analysis.id:
-            from .pyd_models import process_status
             from .models import Session, Analysis
 
             async with Session() as session:
@@ -1583,8 +1564,6 @@ class TaskRegistry:
         return None
 
     def task_from_analysis(self, analysis_model: AnalysisModel) -> CMTask:
-        from .pyd_models import AnalysisModel, process_status
-
         task_class = self.get_task_cls_by_name(analysis_model.analyzer_name)
         if task_class != CMTask:
             return task_class(analysis=analysis_model)

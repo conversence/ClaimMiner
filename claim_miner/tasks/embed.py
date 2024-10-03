@@ -12,14 +12,13 @@ from sqlalchemy import cast, ARRAY, Float
 
 from .. import Session, hashfs, dispatcher
 from ..embed import tf_embed
-from ..pyd_models import embedding_model, fragment_type
+from ..pyd_models import embedding_model, fragment_type, BASE_EMBED_MODEL
 from ..models import (
     Document,
     StatementOrFragment,
     Collection,
     embed_db_model_by_name,
     aliased,
-    BASE_EMBED_MODEL,
 )
 from .tasks import EmbedDocTask, EmbedFragmentTask, EmbedTask
 

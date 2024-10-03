@@ -15,7 +15,6 @@ from .models import (
     embed_db_model_by_name,
     VisibleClaim,
     poly_type_clause,
-    search_target_class,
     aliased,
     model_names,
     Document,
@@ -26,16 +25,15 @@ from .models import (
     ClusterData,
     InClusterData,
     Analysis,
+    search_target_class,
     analysis_output_table,
 )
 from .pyd_models import (
-    UserModel,
     search_mode,
     embedding_model,
     link_type,
     visible_statement_types,
     fragment_type,
-    uri_status,
 )
 from .embed import tf_embed
 from .task_registry import TaskRegistry
