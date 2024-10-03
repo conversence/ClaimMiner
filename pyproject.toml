@@ -71,8 +71,9 @@ test = [
   "pytest",
 ]
 docs = [
+  "pygments-graphql",
   "Sphinx",
-  "sphinx-issues"
+  "sphinx-issues",
 ]
 dev = [
   "ipython",

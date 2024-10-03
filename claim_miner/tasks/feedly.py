@@ -13,8 +13,8 @@ import httpx
 import orjson as json
 
 from .. import hashfs, config, Session
-from ..pyd_models import fragment_type
-from ..models import Document, uri_status, Analysis, Fragment
+from ..pyd_models import fragment_type, uri_status
+from ..models import Document, Analysis, Fragment
 from ..uri_equivalence import make_uri_group
 from ..utils import run_sync, safe_lang_detect
 from .process_html import extract_readable_text_v3
