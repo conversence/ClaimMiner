@@ -1234,7 +1234,6 @@ class TaskRegistry:
             Analysis,
             Collection,
             Topic,
-            process_status,
         )
 
         if for_delete and not task.can_delete_results:

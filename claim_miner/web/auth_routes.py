@@ -148,6 +148,7 @@ async def admin_get(
 ):
     error = ""
     users = []
+    permissions_per_user = {}
     try:
         async with Session() as session:
             base_vars = await get_base_template_vars(request, None, collection, session)
@@ -160,8 +161,6 @@ async def admin_get(
                     cp.user_id: [p.name for p in cp.permissions]
                     for cp in collection_ob.permissions
                 }
-            else:
-                permissions_per_user = {}
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -189,6 +188,7 @@ async def admin_post(
 ):
     error = ""
     users = []
+    permissions_per_user = {}
     try:
         async with request.form() as form, Session() as session:
             base_vars = await get_base_template_vars(
@@ -206,8 +206,6 @@ async def admin_post(
                     uid: [p.name for p in cp.permissions]
                     for (uid, cp) in collection_permissions_per_user.items()
                 }
-            else:
-                permissions_per_user = {}
             for user in users:
                 confirmed = as_bool(form.get(f"{user.id}_confirmed"))
                 if confirmed != user.confirmed:
