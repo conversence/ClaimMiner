@@ -51,7 +51,7 @@ dependencies = [
   "sqlmodel",
   "tensorflow-hub",
   "tensorflow-text; sys_platform != 'darwin'",
-  "tensorflow-text @ https://github.com/sun1638650145/Libraries-and-Extensions-for-TensorFlow-for-Apple-Silicon/releases/download/v2.17/tensorflow_text-2.17.0-cp311-cp311-macosx_11_0_arm64.whl#sha256=f0a7225a1242f06e4d206235f56025a0f70fb9a2e3ecb85bd5ba686269e74c16 ; sys_platform == 'darwin'",
+  "tensorflow-text @ https://github.com/sun1638650145/Libraries-and-Extensions-for-TensorFlow-for-Apple-Silicon/releases/download/v2.18/tensorflow_text-2.18.0-cp311-cp311-macosx_11_0_arm64.whl ; sys_platform == 'darwin'",
   "types-beautifulsoup4",
   "types-passlib",
   "types-psycopg2",
