@@ -27,7 +27,7 @@ config = ConfigParser()
 # print(Path(__file__).parent.joinpath("config.ini"))
 config.read(Path(__file__).parent.parent.joinpath("config.ini"))
 production = as_bool(os.environ.get("PRODUCTION", False))
-is_testing = os.environ.get("PYTEST_CURRENT_TEST", None) is not None
+is_testing = os.environ.get("PYTEST_VERSION", None) is not None
 target_db = os.environ.get(
     "TARGET_DB",
     ("test" if is_testing else ("production" if production else "development")),
