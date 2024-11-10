@@ -131,6 +131,11 @@ from .collections import (
 
 # After set in collections
 from .base import globalScope
+from .structures import (
+    NamespaceDef,
+    SchemaDef,
+    StructuredIdea,
+)
 from .tasks import (
     Analyzer,
     Analysis,
@@ -169,6 +174,7 @@ from .embedding import (
 )
 
 PolyTopic = with_polymorphic(Topic, "*", flat=True)
+StructureTypes = with_polymorphic(Topic, [StructuredIdea, ClaimLink], flat=True)
 PolyTopicType = Union[Topic, ClaimLink, Statement, Fragment, Document, HyperEdge]
 
 model_by_topic_type: Dict[topic_type, Type[Base]] = {
@@ -178,6 +184,8 @@ model_by_topic_type: Dict[topic_type, Type[Base]] = {
     topic_type.fragment: Fragment,
     topic_type.hyperedge: HyperEdge,
     topic_type.link: ClaimLink,
+    topic_type.schema_def: SchemaDef,
+    topic_type.structured_idea: StructuredIdea,
 }
 
 
@@ -192,12 +200,14 @@ async def finalize_db_models():
     db_class_from_pyd_class.pop(EmbeddingModel)
 
 
-async def delete_data(session):
+async def delete_data(session, include_onto=False):
     await session.execute(delete(Analysis))
     await session.execute(delete(ClusterData))
-    await session.execute(
-        delete(Topic.__table__).where(Topic.__table__.c.type != topic_type.analyzer)
-    )
+    if include_onto:
+        await session.execute(delete(Topic.__table__).where(Topic.__table__.c.type != topic_type.analyzer))
+        await session.execute(NamespaceDef)
+    else:
+        await session.execute(delete(Topic.__table__).where(Topic.__table__.c.type.not_in(topic_type.schema_def, topic_type.analyzer)))
     await session.execute(delete(UriEquiv))
     await session.execute(delete(Collection))
 
@@ -220,9 +230,12 @@ __all__ = [
     "InClusterData",
     "PolyTopic",
     "PolyTopicType",
+    "SchemaDef",
     "Statement",
     "StatementAlone",
     "StatementOrFragment",
+    "StructureTypes",
+    "StructuredIdea",
     "TaskTemplate",
     "TaskTrigger",
     "Topic",

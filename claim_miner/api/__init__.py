@@ -48,6 +48,7 @@ from . import search
 from . import statement
 from . import analysis
 from . import user
+from . import structure
 # from . import task_template
 # from . import dashboard
 # from . import prompts

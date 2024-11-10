@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from itertools import chain
-from typing import Mapping, Set, Tuple, Optional, Type, List, ForwardRef
+from typing import Mapping, Set, Tuple, Optional, Type, List, ForwardRef, Union
 
 from pydantic import BaseModel
-from sqlalchemy import event, inspect, ClauseList, BigInteger, ForeignKey
+from sqlalchemy import event, inspect, ClauseList, BigInteger, ForeignKey, select, Select
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import (
@@ -15,11 +15,12 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
+from rdflib import URIRef
 
 from .. import sync_maker
 from ..pyd_models import topic_type
 from ..utils import filter_dict
-from . import logger, db_class_from_pyd_class
+from . import logger, db_class_from_pyd_class, poly_type_clause, with_polymorphic
 
 flushed_objects_by_session: Mapping[int, Set[Tuple[topic_type, int]]] = defaultdict(set)
 created_objects: Set[Tuple[topic_type, int]] = set()
@@ -84,6 +85,7 @@ class Base(DeclarativeBase):
         if cls.pyd_model:
             assert isinstance(model, cls.pyd_model)
         model_data = model.model_dump()
+        model_data.pop('schema_def_term', None)
         if ignore:
             for k in ignore:
                 del model_data[k]
@@ -162,6 +164,7 @@ class Topic(Base):
     created_by: Mapped[BigInteger] = mapped_column(
         BigInteger, ForeignKey(id, onupdate="CASCADE", ondelete="SET NULL")
     )  # Who created the topic?
+    schema_def_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey("schema_def.id", onupdate='CASCADE', ondelete='SET NULL'))
 
     topic_collections: Mapped[List[ForwardRef("TopicCollection")]] = relationship(
         "TopicCollection",
@@ -190,3 +193,41 @@ class Topic(Base):
 
     def api_path(self, collection=globalScope):
         return f"/api{collection.path}/{self.type.name}/{self.id}"
+
+    @classmethod
+    def polymorphic_identities(cls):
+        """Return the list of polymorphic identities defined in subclasses."""
+        return [k for (k, v) in cls.__mapper__.polymorphic_map.items()
+                if issubclass(v.class_, cls)]
+
+    @classmethod
+    def subclasses(cls):
+        """Return the list of polymorphic identities defined in subclasses."""
+        return [v for v in cls.__mapper__.polymorphic_map.values()
+                if issubclass(v.class_, cls)]
+
+    @classmethod
+    def polymorphic_filter(cls):
+        """Return a SQLA expression that tests for subclasses of this class"""
+        return cls.__mapper__.polymorphic_on.in_(cls.polymorphic_identities())
+
+    @classmethod
+    def polymorphic_alias(cls):
+        """Return an alias for this class."""
+        subclasses = cls.subclasses()
+        if len(subclasses) == 1:
+            return cls
+        return with_polymorphic(cls, subclasses, flat=True, aliased=True)
+
+    @classmethod
+    def select_by_schema(cls, term_or_curie: Union[str, URIRef]) -> Tuple[Type[Topic], Select[Type[Topic]]]:
+        from .ontology import Ontology
+        schema_term = Ontology.ontology.as_term(term_or_curie)
+        descendants = Ontology.ontology.descendants[schema_term]
+        model = Ontology.ontology.db_model_for_term(schema_term).polymorphic_alias()
+        q = select(model).filter(poly_type_clause(model), model.schema_def_id.in_(descendants))
+        if len(descendants) > 1:
+            q = q.filter(model.schema_def_id.in_(descendants))
+        else:
+            q = q.filter(model.schema_def_id == next(iter(descendants)))
+        return model, q

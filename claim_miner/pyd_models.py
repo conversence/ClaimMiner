@@ -6,10 +6,11 @@ from typing import Annotated, Optional, List, Union, Dict, Any, Literal, Type
 from uuid import UUID
 from logging import getLogger
 
-from pydantic import BaseModel, ConfigDict, model_validator, Discriminator
+from pydantic import BaseModel, ConfigDict, model_validator, Discriminator, field_serializer
 from frozendict import frozendict
+from rdflib import Namespace, URIRef
 
-from .utils import encode_uuid, decode_uuid, to_optional
+from .utils import to_optional
 
 logger = getLogger(__name__)
 
@@ -29,6 +30,8 @@ class topic_type(Enum):
     collection = "collection"
     agent = "agent"
     cluster = "cluster"
+    schema_def = "schema_def"
+    structured_idea = "structured_idea"
 
 
 class TopicModel(BaseModel):
@@ -39,9 +42,10 @@ class TopicModel(BaseModel):
     id: Optional[int] = None
     type: topic_type
     created_by: Optional[int] = None
+    schema_def_id: Optional[int] = None
 
     # creator: TopicModel
-    from_analyses: Optional[List[AnalysisModel]] = None
+    from_analyses: Optional[List["AnalysisModel"]] = None
     # target_of_analyses: List[AnalysisModel]
 
     # outgoing_links: List[ClaimLinkModel]
@@ -49,11 +53,30 @@ class TopicModel(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def ensure_enums(cls, data: Any) -> Any:
+    def guess_schema_def(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            schema_def_term = data.pop('schema_def_term', None)
+        elif isinstance(data, object):
+            schema_def_term = getattr(data, 'schema_def_term', None)
+        if not schema_def_term:
+            sdt_field = cls.model_fields.get('schema_def_term')
+            if sdt_field:
+                schema_def_term = sdt_field.default
+        if schema_def_term:
+            from .ontology import Ontology
+            schema_def = Ontology.ontology.terms.get(schema_def_term)
+            if schema_def:
+                data['schema_def_id'] = schema_def.id
+
+        # Ensure enums
         if isinstance(data, dict):
             if isinstance(data.get("type"), str):
                 data["type"] = topic_type[data["type"]]
         return data
+
+
+HK = Namespace("https://hyperknowledge.org/schemas/v0#")
+CM = Namespace("https://claimminer.info/schemas/v0#")
 
 
 class UserModel(TopicModel):
@@ -61,6 +84,7 @@ class UserModel(TopicModel):
 
     model_config = ConfigDict(from_attributes=True)
     type: Literal[topic_type.agent] = topic_type.agent
+    schema_def_term: Literal["hk:agent"] = "hk:agent"
 
     handle: str
     id: Optional[int] = None
@@ -78,7 +102,7 @@ class UserModel(TopicModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_enums(cls, data: Any) -> Any:
-        data = super().ensure_enums(data)
+        data = super().guess_schema_def(data)
         if isinstance(data, dict):
             permissions = data.get("permissions", [])
             if permissions and isinstance(permissions[0], str):
@@ -244,6 +268,7 @@ class AnalyzerModel(TopicModel):
     model_config = ConfigDict(from_attributes=True)
 
     type: Literal[topic_type.analyzer] = topic_type.analyzer
+    schema_def_term: Literal["cm:analyzer"] = "cm:analyzer"
     id: Optional[int] = None
     name: str
     version: int
@@ -386,12 +411,13 @@ class UriEquivModel(BaseModel):
     """Equivalence classes of URIs"""
 
     model_config = ConfigDict(from_attributes=True)
+    schema_def_term: Literal["cm:uri_equivalence"] = "cm:uri_equivalence"
     id: Optional[int] = None
     status: uri_status = uri_status.unknown
     canonical_id: Optional[int] = None
     uri: str
 
-    # canonical: UriEquivModel
+    canonical: Optional[UriEquivModel] = None
     # referencing_links: List[DocumentLinkModel]
     # referencing_documents: List[DocumentModel]
 
@@ -412,6 +438,7 @@ class DocumentModel(TopicModel):
 
     model_config = ConfigDict(from_attributes=True)
     type: Literal[topic_type.document] = topic_type.document
+    schema_def_term: Literal["hk:document"] = "hk:document"
     uri_id: Optional[int] = None
     is_archive: bool = False
     public_contents: bool = True
@@ -452,7 +479,7 @@ class DocumentModel(TopicModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_enums(cls, data: Any) -> Any:
-        data = super().ensure_enums(data)
+        data = super().guess_schema_def(data)
         if isinstance(data, dict):
             if data.get("uri", None) is not None and data.get("url", None) is None:
                 data["url"] = data["uri"].uri
@@ -471,6 +498,7 @@ class StatementModel(TopicModel):
 
     model_config = ConfigDict(from_attributes=True)
     type: Literal[topic_type.standalone] = topic_type.standalone
+    schema_def_term: Literal["hk:statement"] = "hk:statement"
     text: str
     scale: fragment_type
     language: str = "en"
@@ -481,7 +509,7 @@ class StatementModel(TopicModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_enums(cls, data: Any) -> Any:
-        data = super().ensure_enums(data)
+        data = super().guess_schema_def(data)
         if isinstance(data, dict) and isinstance(data.get("scale"), str):
             data["scale"] = fragment_type[data["scale"]]
         return data
@@ -497,6 +525,7 @@ class FragmentModel(StatementModel):
 
     model_config = ConfigDict(from_attributes=True)
     type: Literal[topic_type.fragment] = topic_type.fragment
+    schema_def_term: Literal["hk:fragment"] = "hk:fragment"
     position: Optional[int] = None
     char_position: Optional[int] = None
     part_of: Optional[int] = None
@@ -510,6 +539,7 @@ class FragmentModel(StatementModel):
 class AnalysisModel(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra=analysis_extras)
 
+    schema_def_term: Literal["cm:analysis"] = "cm:analysis"
     id: Optional[int] = None
     analyzer_name: str
     analyzer_id: int
@@ -676,6 +706,7 @@ class InClusterDataModel(BaseModel):
 class ClusterDataModel(BaseModel):  # Not a TopicModel yet
     model_config = ConfigDict(from_attributes=True)
     type: Literal[topic_type.cluster] = topic_type.cluster
+    schema_def_term: Literal["cm:cluster"] = "cm:cluster"
     id: Optional[int] = None
     analysis_id: int
     cluster_size: int
@@ -712,6 +743,7 @@ class EmbeddingModel(BaseModel):
     """The vector embedding of a fragment's text. Abstract class."""
 
     model_config = ConfigDict(from_attributes=True)
+    schema_def_term: Literal["cm:embedding"] = "cm:embedding"
     analyzer_id: int
     scale: fragment_type
     doc_id: Optional[int] = None
@@ -729,6 +761,7 @@ class HyperEdgeModel(TopicModel):
     """A link materialized as a node, but without content."""
 
     model_config = ConfigDict(from_attributes=True)
+    schema_def_term: Literal["hk:hyperedge"] = "hk:hyperedge"
     type: Literal[topic_type.hyperedge] = topic_type.hyperedge
     # Temporary
     scale: Literal[fragment_type.reified_arg_link]
@@ -736,7 +769,7 @@ class HyperEdgeModel(TopicModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_enums(cls, data: Any) -> Any:
-        data = super().ensure_enums(data)
+        data = super().guess_schema_def(data)
         if isinstance(data, dict) and isinstance(data.get("scale"), str):
             data["scale"] = fragment_type[data["scale"]]
         return data
@@ -747,6 +780,7 @@ class ClaimLinkModel(TopicModel):
 
     model_config = ConfigDict(from_attributes=True)
     type: Literal[topic_type.link] = topic_type.link
+    schema_def_term: Literal["cm:claim_link"] = "cm:claim_link"
     id: Optional[int] = None
     source: int
     target: int
@@ -761,27 +795,59 @@ class ClaimLinkModel(TopicModel):
     @model_validator(mode="before")
     @classmethod
     def ensure_enums(cls, data: Any) -> Any:
-        data = super().ensure_enums(data)
+        data = super().guess_schema_def(data)
         if isinstance(data, dict) and isinstance(data.get("link_type"), str):
             data["link_type"] = link_type[data["link_type"]]
         return data
 
 
+class SchemaDefModel(TopicModel):
+    """A schema definition"""
+    model_config = ConfigDict(from_attributes=True)
+    schema_def_term: Literal["hk:schema_def"] = "hk:schema_def"
+    parent_id: Optional[int] = None
+    ancestors_id: Optional[List[int]] = None
+    prefix: str
+    term: str
+    # TODO: full_term: rdflib.URIRef
+    data: Dict  # TODO: Schema structure
+
+    @property
+    def full_term(self) -> URIRef:
+        from .ontology import Ontology
+        return Ontology.ontology.as_term(f"{self.prefix}:{self.term}")
+
+class AbstractStructuredIdeaModel(TopicModel):
+    pass
+class GenericStructuredIdeaModel(AbstractStructuredIdeaModel):
+    model_config = ConfigDict(from_attributes=True)
+    ref_structure: Optional[Dict[str, Union[int, List[int]]]] = None
+    literal_structure: Optional[Dict[str, Any]] = None
+    refs: Optional[List[int]] = None
+    schema_def: Optional[SchemaDefModel] = None
+    references: Optional[List[TopicModel]] = None
+
+    @property
+    def term(self):
+        return self.schema_def.term
+
+    # TODO: implement type constraints on creation
+
 DocumentOrFragmentModel = Annotated[
-    Union[DocumentModel, FragmentModel], Discriminator("type")
+    Union[DocumentModel, FragmentModel], Discriminator("schema_def_term")
 ]
 StatementOrFragmentModel = Annotated[
-    Union[StatementModel, FragmentModel], Discriminator("type")
+    Union[StatementModel, FragmentModel], Discriminator("schema_def_term")
 ]
 AnyClaimOrLinkModel = Annotated[
-    Union[ClaimLinkModel, StatementModel, HyperEdgeModel], Discriminator("type")
+    Union[ClaimLinkModel, StatementModel, HyperEdgeModel], Discriminator("schema_def_term")
 ]
 AnyClaimOrHyperedgeModel = Annotated[
-    Union[StatementModel, HyperEdgeModel], Discriminator("type")
+    Union[StatementModel, HyperEdgeModel], Discriminator("schema_def_term")
 ]
 AnyTopicModel = Annotated[
     Union[StatementModel, HyperEdgeModel, ClaimLinkModel, DocumentModel, FragmentModel],
-    Discriminator("type"),
+    Discriminator("schema_def_term"),
 ]
 
 
@@ -813,6 +879,8 @@ pyd_model_by_topic_type: Dict[topic_type, type[BaseModel]] = {
     topic_type.agent: UserModel,
     topic_type.cluster: ClusterDataModel,
     topic_type.analyzer: AnalyzerModel,
+    topic_type.schema_def: SchemaDefModel,
+    topic_type.structured_idea: AbstractStructuredIdeaModel,
 }
 
 
