@@ -22,9 +22,7 @@ CREATE TYPE public.topic_type AS ENUM (
     'analysis',
     'collection',
     'agent',
-    'cluster',
-    'schema_def',
-    'structured_idea'
+    'cluster'
 );
 
 

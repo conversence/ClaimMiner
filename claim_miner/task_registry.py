@@ -1374,6 +1374,8 @@ class TaskRegistry:
 
         registry = cls.get_registry()
         if not registry.analyzer_by_id:
+            from .ontology import Ontology
+            await Ontology.ensure_onto()
             async with Session() as session:
                 await registry.load_analyzers(session)
                 await registry.load_templates(session)
