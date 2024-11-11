@@ -1,0 +1,326 @@
+id: https://claimminer.info/schemas/v0#
+name: claim_miner
+prefixes:
+  hk: https://hyperknowledge.org/schemas/v0#
+  cm: https://claimminer.info/schemas/v0#
+default_prefix: cm
+enums:
+  NodePhrasing:
+  Polarity:
+  StatementForm:  # actually a fragment_type
+classes:
+  Analyzer:
+  SchemaDef:
+    class_uri: hk:schema_def
+  HyperEdge:
+    class_uri: hk:hyperedge
+  Collection:
+    class_uri: hk:collection
+    slots:
+      - name
+  UriEquivalence:
+  Text:
+    class_uri: hk:text
+    slots:
+      - text
+      - language
+  Statement:
+    class_uri: hk:statement
+    is_a: Text
+    slots:
+      - form
+      - language_level
+  Fragment:
+    class_uri: hk:fragment
+    is_a: Text
+    slots:
+      - position
+      - part_of
+  Paragraph:
+    is_a: Fragment
+  Sentence:
+    is_a: Fragment
+  Quote:
+    is_a: Fragment
+  Post:
+    is_a: Fragment
+  Item:
+    is_a: Fragment
+  Predicate:
+    class_uri: hk:predicate
+  ClaimLink:
+    is_a: Predicate
+    slots:
+      - polarity
+      - target_form
+  # TODO: Add source/target range constraints
+  UnknownLink:
+    is_a: ClaimLink
+  TruthArgument:
+    is_a: ClaimLink
+  Consider:
+    is_a: ClaimLink
+  Example:
+    is_a: ClaimLink
+  Subpart:
+    is_a: ClaimLink
+  Answer:
+    is_a: ClaimLink
+  InCategory:
+    is_a: ClaimLink
+  ShowsCategory:
+    is_a: ClaimLink
+  RelevanceArgument:
+    is_a: ClaimLink
+  Refinement:
+    is_a: ClaimLink
+  Quotes:
+    is_a: ClaimLink
+  Structure:
+    class_uri: "hk:structure"
+  Document:
+    class_uri: "hk:document"
+    is_a: Structure
+  Cluster:
+    is_a: Structure
+    slots:
+      - cluster_center
+  Analysis:
+    is_a: Structure
+    slots:
+      - target
+      - output
+      - context
+      - analysis_category
+  IdeaBundle:
+    is_a: Structure
+    slots:
+      - commands
+      # Use SKOS? All that follows is dubious
+      - label
+      - alt_labels
+      - description
+      - alt_descriptions
+  StatementBundle:
+    is_a: IdeaBundle
+    slots:
+      - form
+      - standard
+      - simple
+      - technical
+      - humor
+      - web
+      - cluster
+  FullClaimBundle:
+    is_a: IdeaBundle
+    slots:
+      - text_base
+      - text_negation
+      - text_question
+      - text_narrative
+      - bundle_description
+  ArgumentStructure:
+    is_a: IdeaBundle
+    slots:
+      - conclusion_form
+      - polarity
+      - details
+      - premises
+      - conclusion
+      - premise_links
+      - conclusion_link
+  RelevanceArgumentStructure:
+    is_a: ArgumentStructure
+    rules:
+      - preconditions:
+          slot_conditions:
+            conclusion:
+              range: ArgumentStructure
+              required: true
+            conclusion_link:
+              range: RelevanceArgument
+              required: true
+              # constraints:
+              #   - conclusion_link.target = self
+              #   - conclusion_link.source = conclusion
+  CategoryContainer:
+    is_a: IdeaBundle
+    slots:
+      - category
+      - generic
+      - specific
+      - generic_cat_link
+      - cat_specific_links
+      - in_category_links
+
+slots:
+  id:
+    identifier: true
+    required: true
+  name:
+    range: string
+    required: true
+  text:
+    range: string
+    required: true
+  language:
+    range: string # langcodes?
+    required: true
+  form:
+    range: StatementForm
+    required: true
+  language_level:
+    range: NodePhrasing
+    required: true
+  position:
+    range: integer
+    required: true
+  part_of:
+    required: true
+    any_of:
+      - range: Fragment
+      - range: Document
+  polarity:
+    range: Polarity
+    required: true
+  target_form:
+    range: StatementForm
+    required: true
+  cluster_center:
+    range: Statement
+    required: true
+  target:
+    any_of:
+      - range: Fragment
+      - range: Statement
+  output:
+    any_of:
+      - range: Fragment
+      - range: Statement
+      - range: Structure
+    multivalued: true
+  context:
+    multivalued: true
+    required: true
+    range: Fragment
+  analysis_category:  # What was that again???
+    required: true
+    range: Statement
+  commands:
+    range: string
+    multivalued: true
+    required: true
+  # Use SKOS? All that follows is dubious
+  label:
+    range: Statement
+  alt_labels:
+    range: Statement
+    multivalued: true
+  description:
+    range: Statement
+  alt_descriptions:
+    range: Statement
+    multivalued: true
+  standard:
+    range: Statement
+    required: true
+    # constraints:
+    #   - standard.form = self.form
+    #   - standard.language_level = NodePhrasing.standard
+  simple:
+    range: Statement
+    # constraints:
+    #   - simple.form = self.form
+    #   - simple.language_level = NodePhrasing.simple
+  technical:
+    range: Statement
+    # constraints:
+    #   - technical.form = self.form
+    #   - technical.language_level = NodePhrasing.technical
+  humor:
+    range: Statement
+    # constraints:
+    #   - humor.form = self.form
+    #   - humor.language_level = NodePhrasing.humor
+  web:
+    range: Statement
+    # constraints:
+    #   - web.form = self.form
+    #   - web.language_level = NodePhrasing.web
+  cluster:
+    range: cm:cluster
+  text_base:
+    range: StatementBundle
+    # constraints:
+    #   - text_base.form = claim
+  text_negation:
+    range: StatementBundle
+    # constraints:
+    #   - text_negation.form = claim
+  text_question:
+    range: StatementBundle
+    # constraints:
+    #   - text_question.form = claim_question
+  text_narrative:
+    range: StatementBundle
+  bundle_description:
+    range: StatementBundle
+  conclusion_form:
+    range: StatementForm
+    required: true
+  details:
+    range: StatementBundle
+  premises:
+    range: FullClaimBundle
+    multivalued: true
+    required: true
+  conclusion:
+    range: FullClaimBundle
+  premise_links:
+    range: subpart
+    multivalued: true
+    required: true
+    # constraints:
+    #   - premise_link.target = premises  # One of...
+    #   - premise_link.source = self
+  conclusion_link:
+    range: truth_argument
+    required: true
+    # constraints:
+    #   - conclusion_link.target = self
+    #   - conclusion_link.source = conclusion
+  category:
+    range: StatementBundle  # With no DM equivalent
+    required: true
+    # constraints:
+    #   - category.form = StatementForm.category
+  generic:
+    range: IdeaBundle
+    required: true
+  specific:
+    range: IdeaBundle
+    required: true
+    multivalued: true
+  generic_cat_link:
+    range: shows_category
+    required: true
+    # constraints:
+    #   - generic_cat_link.target = generic
+    #   - generic_cat_link.source = self
+  cat_specific_links:
+    range: example
+    multivalued: true
+    required: true
+    # constraints:
+    #   - cat_specific_links.target = self
+    #   - cat_specific_links.source = specific # One of
+  in_category_links:
+    range: in_category
+    multivalued: true
+    required: true
+    # constraints:
+    #   in_category_links.target = category
+    #   in_category_links.source = specific # One of
+
+
+# TODO: Analysis
