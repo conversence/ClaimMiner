@@ -28,6 +28,7 @@ dependencies = [
   # "httpx_ws",
   "isodate",
   "itsdangerous",  # Why not automatic?
+  "linkml",
   "keras",
   "python-jose",
   "python-multipart",  # Why not automatic?
