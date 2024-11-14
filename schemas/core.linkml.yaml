@@ -118,7 +118,9 @@ classes:
       - text_negation
       - text_question
       - text_narrative
-      - bundle_description
+    attributes:
+      description:
+        range: StatementBundle
   ArgumentStructure:
     is_a: IdeaBundle
     slots:
@@ -262,8 +264,6 @@ slots:
     # constraints:
     #   - text_question.form = claim_question
   text_narrative:
-    range: StatementBundle
-  bundle_description:
     range: StatementBundle
   conclusion_form:
     range: StatementForm
