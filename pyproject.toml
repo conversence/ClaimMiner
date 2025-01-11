@@ -37,7 +37,7 @@ dependencies = [
   "onnxruntime",
   "orjson",
   "passlib",
-  "pdfx",
+  "pdfx>=1.4.1",
   "pgvector",
   "pluggy",
   "pyisemail",
@@ -60,7 +60,7 @@ dependencies = [
   "types-PyYAML",
   "types-requests",
   "unstructured",
-  "uvicorn",
+  "uvicorn[standard]",
   "Werkzeug",
 ]
 
@@ -95,6 +95,9 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["claim_miner"]
+
+[tool.uv]
+override-dependencies = ["pdfminer==20240706"]
 
 [tool.pytest.ini_options]
 markers = [
