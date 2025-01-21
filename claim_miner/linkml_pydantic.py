@@ -25,7 +25,7 @@ from .pydantic_adapters import PydanticURIRef
 from .pyd_models import ontology_status
 from .base_onto import BaseOntologyRegistry, OntologyData, OntologyClassData, OntologyHandler
 
-DEBUG = False
+DEBUG = True
 if DEBUG:
     import pdb
 
@@ -440,10 +440,16 @@ class PydanticModelGenerator(LMGenerator):
         base_class = self.base_model_cls
         if cls.is_a:
             base_class_name = self.class_names.get(cls.is_a)
-            # Hoping it's already defined, i.e. that end_class will come after superclasses!
-            # Not sure how to do otherwise.
             base_class_data = self.class_data[base_class_name]
             base_class = base_class_data.as_pydantic()
+        if cls.mixins:
+            base_class = [base_class]
+            for mixin_name in cls.mixins:
+                mixin_cname = self.class_names.get(mixin_name)
+                mixin_data = self.class_data[mixin_cname]
+                base_class.append(mixin_data.as_pydantic())
+            base_class = tuple(base_class)
+
         attributes['__base__'] = base_class
         self.class_names[cls.name] = classname
         # print(attributes)

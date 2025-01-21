@@ -11,10 +11,20 @@ async def test_ontology_uses_subclassses(linkml_ontology):
         if cls_def.is_a:
             sup_cls_name = linkml_ontology.class_names[cls_def.is_a]
             sup_class = linkml_ontology.class_data[sup_cls_name]
-            if not sup_class:
-                pdb.set_trace()
             assert issubclass(pyd_cls, sup_class.as_pydantic())
             print(f"{pyd_cls.__name__} < {sup_class.as_pydantic().__name__}")
+
+
+async def test_ontology_uses_mixins(linkml_ontology):
+    for cdata in linkml_ontology.class_data.values():
+        pyd_cls = cdata.as_pydantic()
+        cls_def = cdata.schema
+        if cls_def.mixins:
+            for mname in cls_def.mixins:
+                mixin_name = linkml_ontology.class_names[mname]
+                mixin_cdef = linkml_ontology.class_data[mixin_name]
+                assert issubclass(pyd_cls, mixin_cdef.as_pydantic())
+                print(f"{pyd_cls.__name__} <~ {mixin_cdef.as_pydantic().__name__}")
 
 
 async def test_ontology_loads_enum(linkml_ontology):
