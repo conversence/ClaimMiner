@@ -10,17 +10,17 @@ from ..app import NotFound, BadRequest
 from ..auth import user_with_coll_permission_t_dep
 from ..pyd_models import AbstractStructuredIdeaModel, ClaimLinkModel
 from ..models import Topic, StructureTypes, StructuredIdea, ClaimLink, poly_type_clause
-from ..ontology import Ontology
+from ..ontology_registry import OntologyRegistry
 from . import api_router, get_collection
 
 FullStructuredType = StructureTypes
-FullStructuredIdeaModelType = Ontology.ontology.as_union_type('cm:idea_bundle', 'hk:predicate')
+FullStructuredIdeaModelType = OntologyRegistry.registry.as_union_type('cm:idea_bundle', 'hk:predicate')
 # UseStructuredType = FullStructuredType
 # UseStructuredModelType = FullStructuredIdeaModelType
 # BUG: the as_model for claimlink is a ClaimLinkModel, not CmClaimLink, so the above fails
 
 UseStructuredType = StructuredIdea
-UseStructuredModelType = Ontology.ontology.as_union_type('cm:idea_bundle')
+UseStructuredModelType = OntologyRegistry.registry.as_union_type('cm:idea_bundle')
 
 
 @api_router.get("/idea/{id}")

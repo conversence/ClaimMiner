@@ -1,8 +1,8 @@
 import os
-from typing import Dict, Iterator
+from typing import Dict, AsyncGenerator
 import logging
 
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
 
@@ -127,10 +127,23 @@ def app(models) -> FastAPI:
     return app
 
 
+# Not sure whether this needs iteration at this level? Will go with local creation for now.
+# @pytest.fixture(scope="session")
+# async def app_transport_i(app) -> AsyncGenerator[ASGITransport, None]:
+#     async with LifespanManager(app):
+#         yield ASGITransport(app=app)
+
+# @pytest.fixture(scope="session")
+# async def client(app_transport_i) -> AsyncGenerator[AsyncClient, None]:
+#     async for app_transport in app_transport_i:
+#         async with AsyncClient(base_url="http://test", transport=app_transport) as ac:
+#             yield ac
+
+
 @pytest.fixture(scope="session")
-async def client(app) -> Iterator[AsyncClient]:
+async def client(app) -> AsyncGenerator[AsyncClient, None]:
     async with LifespanManager(app):
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        async with AsyncClient(base_url="http://test", transport=ASGITransport(app=app)) as ac:
             yield ac
 
 
@@ -170,19 +183,21 @@ def admin_headers(admin_token) -> Dict:
 
 
 @pytest.fixture(scope="function")
-async def admin_cookie_client(app, admin_headers) -> Iterator[AsyncClient]:
+async def admin_cookie_client(app, admin_headers) -> AsyncGenerator[AsyncClient, None]:
     async with LifespanManager(app):
         async with AsyncClient(
-            app=app, base_url="http://test", cookies=admin_headers
+            base_url="http://test", transport=ASGITransport(app=app),
+            cookies=admin_headers,
         ) as ac:
             yield ac
 
 
 @pytest.fixture(scope="function")
-async def admin_headers_client(app, admin_headers) -> Iterator[AsyncClient]:
+async def admin_headers_client(app, admin_headers) -> AsyncGenerator[AsyncClient, None]:
     async with LifespanManager(app):
         async with AsyncClient(
-            app=app, base_url="http://test", headers=admin_headers
+            base_url="http://test", transport=ASGITransport(app=app),
+            headers=admin_headers
         ) as ac:
             yield ac
 

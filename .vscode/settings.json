@@ -1,5 +1,7 @@
 {
   "files.watcherExclude": {
     "**/target": true
-  }
+  },
+  "cody.autocomplete.advanced.provider": "experimental-ollama",
+  "cody.autocomplete.completeSuggestWidgetSelection": false
 }

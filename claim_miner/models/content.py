@@ -411,7 +411,7 @@ class Statement(Topic):
         lang: Optional[str] = None,
         scale: Optional[fragment_type] = None,
         new_within_parent: Optional[Statement] = None,
-        schema_def_id: Optional[int] = None,
+        schema_term_id: Optional[int] = None,
     ) -> Statement:
         query = select(cls).filter_by(text=txt, doc_id=None)
         if new_within_parent:
@@ -428,11 +428,11 @@ class Statement(Topic):
                 existing.scale = scale
             return existing
         lang = lang or safe_lang_detect(txt)
-        if not schema_def_id:
-            from .ontology import Ontology
-            schema_def_id = Ontology.ontology.terms[HK.statement].id
-        assert schema_def_id
-        return Statement(text=txt, language=lang, scale=scale, schema_def_id=schema_def_id)
+        if not schema_term_id:
+            from .ontology_registry import OntologyRegistry
+            schema_term_id = OntologyRegistry.registry.terms[HK.statement].id
+        assert schema_term_id
+        return Statement(text=txt, language=lang, scale=scale, schema_term_id=schema_term_id)
 
     def web_path(self, collection=globalScope):
         return f"{collection.path}/claim/{self.id}"

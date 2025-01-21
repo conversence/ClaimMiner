@@ -1,17 +1,23 @@
 id: https://claimminer.info/schemas/v0#
 name: claim_miner
 prefixes:
+  linkml: https://w3id.org/linkml/
   hk: https://hyperknowledge.org/schemas/v0#
   cm: https://claimminer.info/schemas/v0#
 default_prefix: cm
+imports:
+  - linkml:types
 enums:
   NodePhrasing:
+    permissible_values:
+      abc:
+      def:
   Polarity:
   StatementForm:  # actually a fragment_type
 classes:
   Analyzer:
-  SchemaDef:
-    class_uri: hk:schema_def
+  SchemaTerm:
+    class_uri: hk:schema_term
   HyperEdge:
     class_uri: hk:hyperedge
   Collection:
@@ -28,7 +34,7 @@ classes:
     class_uri: hk:statement
     is_a: Text
     slots:
-      - form
+      # - form
       - language_level
   Fragment:
     class_uri: hk:fragment
@@ -50,9 +56,9 @@ classes:
     class_uri: hk:predicate
   ClaimLink:
     is_a: Predicate
-    slots:
-      - polarity
-      - target_form
+    # slots:
+      # - polarity
+      # - target_form
   # TODO: Add source/target range constraints
   UnknownLink:
     is_a: ClaimLink
@@ -104,7 +110,7 @@ classes:
   StatementBundle:
     is_a: IdeaBundle
     slots:
-      - form
+      # - form
       - standard
       - simple
       - technical
@@ -124,8 +130,8 @@ classes:
   ArgumentStructure:
     is_a: IdeaBundle
     slots:
-      - conclusion_form
-      - polarity
+      # - conclusion_form
+      # - polarity
       - details
       - premises
       - conclusion
@@ -250,7 +256,7 @@ slots:
     #   - web.form = self.form
     #   - web.language_level = NodePhrasing.web
   cluster:
-    range: cm:cluster
+    range: Cluster
   text_base:
     range: StatementBundle
     # constraints:
@@ -277,14 +283,14 @@ slots:
   conclusion:
     range: FullClaimBundle
   premise_links:
-    range: subpart
+    range: Subpart
     multivalued: true
     required: true
     # constraints:
     #   - premise_link.target = premises  # One of...
     #   - premise_link.source = self
   conclusion_link:
-    range: truth_argument
+    range: TruthArgument
     required: true
     # constraints:
     #   - conclusion_link.target = self
@@ -302,20 +308,20 @@ slots:
     required: true
     multivalued: true
   generic_cat_link:
-    range: shows_category
+    range: ShowsCategory
     required: true
     # constraints:
     #   - generic_cat_link.target = generic
     #   - generic_cat_link.source = self
   cat_specific_links:
-    range: example
+    range: Example
     multivalued: true
     required: true
     # constraints:
     #   - cat_specific_links.target = self
     #   - cat_specific_links.source = specific # One of
   in_category_links:
-    range: in_category
+    range: InCategory
     multivalued: true
     required: true
     # constraints:

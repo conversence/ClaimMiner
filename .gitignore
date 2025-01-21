@@ -25,3 +25,5 @@ node_modules
 
 # personal files
 .personal
+
+.codegpt

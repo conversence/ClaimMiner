@@ -3,16 +3,17 @@ from __future__ import annotations
 from typing import Union, List, Dict, Any, Mapping, Optional, Type, Set
 from enum import Enum
 
-from sqlalchemy import BigInteger, ForeignKey, select, String, Boolean, FetchedValue, DateTime
+from sqlalchemy import BigInteger, ForeignKey, select, String, Boolean, FetchedValue, DateTime, Integer, UniqueConstraint
 from sqlalchemy.sql import any_, func
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY, array
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY, array, ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship, foreign, remote, validates
 from rdflib import URIRef, Namespace
 
 from ..pyd_models import (
     topic_type,
-    SchemaDefModel,
+    SchemaTermModel,
     AbstractStructuredIdeaModel,
+    ontology_status,
 )
 from . import (
     BaseModel
@@ -20,6 +21,7 @@ from . import (
 from .base import Base, Topic
 
 
+ontology_status_db = ENUM(ontology_status, name="ontology_status")
 
 class NamespaceDef(Base):
     __tablename__ = 'namespace'
@@ -28,33 +30,54 @@ class NamespaceDef(Base):
     is_base: Mapped[Boolean] = mapped_column(Boolean, default=False, server_default='false')
 
 
-class SchemaDef(Topic):
-    """A schema definition"""
-    __tablename__ = 'schema_def'
-    id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey(Topic.id, onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)  #: Primary key
+class Ontology(Topic):
+    """A set of related schema definitions, an ontologies"""
+    __tablename__ = 'ontology'
     __mapper_args__ = {
         "polymorphic_load": "inline",
-        "polymorphic_identity": topic_type.schema_def,
+        "polymorphic_identity": topic_type.ontology,
         "inherit_condition": id==Topic.id,
     }
-    pyd_model = SchemaDefModel
-    prefix: Mapped[String] = mapped_column(String, ForeignKey(NamespaceDef.prefix, onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    term: Mapped[String] = mapped_column(String, nullable=False)
-    data: Mapped[Dict] = mapped_column(JSONB, nullable=False)
-    parent_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey(id, onupdate='CASCADE', ondelete='SET NULL'))
-    ancestors_id: Mapped[List[BigInteger]] = mapped_column(ARRAY(BigInteger), server_default=FetchedValue(), server_onupdate=FetchedValue())
-
-    parent: Mapped[SchemaDef] = relationship("SchemaDef", primaryjoin=foreign(parent_id)==remote(id), uselist=False)
-    ancestors: Mapped[List[SchemaDef]] = relationship("SchemaDef", primaryjoin=remote(id)==any_(foreign(ancestors_id)), uselist=True)
+    prefix: Mapped[String] = mapped_column(String, ForeignKey(NamespaceDef.prefix, onupdate='CASCADE', ondelete='CASCADE'), nullable=False, primary_key=True)
+    status: Mapped[ontology_status] = mapped_column(ontology_status_db, server_default=ontology_status_db.draft)
+    ontology_language: Mapped[String] = mapped_column(String, server_default='linkml')
+    data: Mapped[Dict[str, Any]] = mapped_column(JSONB, server_default='{}', nullable=False)
     namespace: Mapped[NamespaceDef] = relationship(NamespaceDef, lazy='joined')
 
     @property
+    def uri(self) -> Namespace:
+        return Namespace(self.namespace.uri)
+
+class SchemaTerm(Topic):
+    """A schema definition"""
+    __tablename__ = 'schema_term'
+    __table_args__ = (
+        UniqueConstraint("ontology_prefix", "term"),
+    )
+    __mapper_args__ = {
+        "polymorphic_load": "inline",
+        "polymorphic_identity": topic_type.schema_term,
+        "inherit_condition": id==Topic.id,
+    }
+    id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey(Topic.id, onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)  #: Primary key
+    pyd_model = SchemaTermModel
+    term: Mapped[String] = mapped_column(String, nullable=False)
+    public_term: Mapped[String] = mapped_column(String, unique=True)
+    parent_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey(id, onupdate='CASCADE', ondelete='SET NULL'))
+    ancestors_id: Mapped[List[BigInteger]] = mapped_column(ARRAY(BigInteger), server_default=FetchedValue(), server_onupdate=FetchedValue())
+    ontology_prefix: Mapped[String] = mapped_column(String, ForeignKey(Ontology.prefix, onupdate='CASCADE', ondelete='CASCADE'))
+
+    parent: Mapped[SchemaTerm] = relationship("SchemaTerm", primaryjoin=foreign(parent_id)==remote(id), uselist=False)
+    ancestors: Mapped[List[SchemaTerm]] = relationship("SchemaTerm", primaryjoin=remote(id)==any_(foreign(ancestors_id)), uselist=True)
+    ontology: Mapped[Ontology] = relationship(Ontology, foreign_keys=[ontology_prefix], uselist=False)
+
+    @property
     def full_term(self) -> URIRef:
-        return Namespace(self.namespace.uri)[self.term]
+        return self.ontology.uri[self.term]
 
     @property
     def curie(self) -> str:
-        return f"{self.prefix}:{self.term}"
+        return f"{self.ontology.prefix}:{self.term}"
 
     def range_types(self):
         existing = set()
@@ -100,7 +123,7 @@ class SchemaDef(Topic):
         return self.inherited_data('roles')
 
 
-Topic.schema_def: Mapped[SchemaDef] = relationship(SchemaDef, foreign_keys=Topic.schema_def_id, remote_side=SchemaDef.id)
+Topic.schema_term: Mapped[SchemaTerm] = relationship(SchemaTerm, foreign_keys=Topic.schema_term_id, remote_side=SchemaTerm.id)
 
 
 class StructuredIdea(Topic):
@@ -129,10 +152,10 @@ class StructuredIdea(Topic):
     def from_model(cls, model: BaseModel, **extra):
         assert isinstance(model, AbstractStructuredIdeaModel)
         # The models have a flatter structure, convert to db structure
-        # Assume ontology was loaded
-        from .ontology import Ontology
-        ontology = Ontology.ontology
-        schema = ontology.terms[ontology.as_term(model.schema_def_term)]
+        # Assume ontologies were loaded
+        from ..ontology_registry import OntologyRegistry
+        ontologies = OntologyRegistry.registry
+        schema = ontologies.terms[ontologies.as_term(model.schema_term_term)]
         assert schema
         literal_structure = {att: getattr(model, att) for att in schema.all_attributes}
         literal_structure = {k: v.name if isinstance(v, Enum) else v for (k, v) in literal_structure.items()}
@@ -151,7 +174,7 @@ class StructuredIdea(Topic):
 
         ref_structure = {r: get_id_of_role(r) for r in schema.all_roles}
         # ref_structure = {k: v for (k, v) in ref_structure.items() if v}
-        return cls(schema_def_id=schema.id, created_by=get_id_of_role('created_by'), ref_structure=ref_structure, literal_structure=literal_structure, **extra)
+        return cls(schema_term_id=schema.id, created_by=get_id_of_role('created_by'), ref_structure=ref_structure, literal_structure=literal_structure, **extra)
 
     async def preload_substructures(self, session):
         f = func.sub_structures_rec(self.id).table_valued('id')
@@ -162,11 +185,11 @@ class StructuredIdea(Topic):
 
     def as_model(self, session, model_cls: Optional[Type[BaseModel]]=None, recursion: Optional[Set[int]]=None):
         # The models have a flatter structure, convert from db structure
-        if (not model_cls) and self.schema_def_id:
-            from .ontology import Ontology
-            ontology = Ontology.ontology
-            schema = ontology.schemas_by_id[self.schema_def_id]
-            model_cls = ontology.term_models.get(schema.term)
+        if (not model_cls) and self.schema_term_id:
+            from .ontology_registry import OntologyRegistry
+            ontologies = OntologyRegistry.registry
+            schema = ontologies.schemas_by_id[self.schema_term_id]
+            model_cls = ontologies.term_models.get(schema.term)
         model_cls = model_cls or self.pyd_model
         assert model_cls
         assert issubclass(model_cls, self.pyd_model)

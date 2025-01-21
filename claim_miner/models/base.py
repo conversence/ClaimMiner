@@ -85,7 +85,7 @@ class Base(DeclarativeBase):
         if cls.pyd_model:
             assert isinstance(model, cls.pyd_model)
         model_data = model.model_dump()
-        model_data.pop('schema_def_term', None)
+        model_data.pop('schema_term_term', None)
         if ignore:
             for k in ignore:
                 del model_data[k]
@@ -164,7 +164,7 @@ class Topic(Base):
     created_by: Mapped[BigInteger] = mapped_column(
         BigInteger, ForeignKey(id, onupdate="CASCADE", ondelete="SET NULL")
     )  # Who created the topic?
-    schema_def_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey("schema_def.id", onupdate='CASCADE', ondelete='SET NULL'))
+    schema_term_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey("schema_term.id", onupdate='CASCADE', ondelete='SET NULL'))
 
     topic_collections: Mapped[List[ForwardRef("TopicCollection")]] = relationship(
         "TopicCollection",
@@ -221,13 +221,13 @@ class Topic(Base):
 
     @classmethod
     def select_by_schema(cls, term_or_curie: Union[str, URIRef]) -> Tuple[Type[Topic], Select[Type[Topic]]]:
-        from .ontology import Ontology
-        schema_term = Ontology.ontology.as_term(term_or_curie)
-        descendants = Ontology.ontology.descendants[schema_term]
-        model = Ontology.ontology.db_model_for_term(schema_term).polymorphic_alias()
-        q = select(model).filter(poly_type_clause(model), model.schema_def_id.in_(descendants))
+        from .ontology_registry import OntologyRegistry
+        schema_term = OntologyRegistry.registry.as_term(term_or_curie)
+        descendants = OntologyRegistry.registry.descendants[schema_term]
+        model = OntologyRegistry.registry.db_model_for_term(schema_term).polymorphic_alias()
+        q = select(model).filter(poly_type_clause(model), model.schema_term_id.in_(descendants))
         if len(descendants) > 1:
-            q = q.filter(model.schema_def_id.in_(descendants))
+            q = q.filter(model.schema_term_id.in_(descendants))
         else:
-            q = q.filter(model.schema_def_id == next(iter(descendants)))
+            q = q.filter(model.schema_term_id == next(iter(descendants)))
         return model, q

@@ -22,7 +22,7 @@ WITH RECURSIVE t(x) AS (
   values (target_id) UNION ALL
   SELECT si.id FROM t, public.structured_idea AS si
   JOIN public.topic USING(id)
-  WHERE ARRAY[t.x] && si.refs AND schema_in_type_ids(topic.schema_def_id, structure_types))
+  WHERE ARRAY[t.x] && si.refs AND schema_in_type_ids(topic.schema_term_id, structure_types))
   SELECT DISTINCT x AS id FROM t;
 $$;
 
@@ -31,7 +31,7 @@ WITH RECURSIVE t(x) AS (
   values (target_id) UNION ALL
   SELECT si.id FROM t, public.structured_idea AS si
   JOIN public.topic USING(id)
-  WHERE ARRAY[t.x] && si.refs AND schema_in_type_terms(topic.schema_def_id, structure_terms))
+  WHERE ARRAY[t.x] && si.refs AND schema_in_type_terms(topic.schema_term_id, structure_terms))
   SELECT DISTINCT x AS id FROM t;
 $$;
 
@@ -80,19 +80,19 @@ $$;
 CREATE OR REPLACE FUNCTION public.in_structures_cl_filtered_ids(target_id BIGINT, structure_types BIGINT[]) RETURNS TABLE(id BIGINT) LANGUAGE sql STABLE AS $$
   SELECT id FROM public.structured_idea AS si
   JOIN public.topic USING(id)
-  WHERE ARRAY[target_id] && refs AND schema_in_type_ids(topic.schema_def_id, structure_types)
+  WHERE ARRAY[target_id] && refs AND schema_in_type_ids(topic.schema_term_id, structure_types)
   UNION ALL SELECT id FROM public.claim_link AS cl
   JOIN public.topic USING(id)
-  WHERE (target_id = cl.source OR target_id = cl.target) AND schema_in_type_ids(topic.schema_def_id, structure_types);
+  WHERE (target_id = cl.source OR target_id = cl.target) AND schema_in_type_ids(topic.schema_term_id, structure_types);
 $$;
 
 CREATE OR REPLACE FUNCTION public.in_structures_cl_filtered_terms(target_id BIGINT, structure_terms varchar[]) RETURNS TABLE(id BIGINT) LANGUAGE sql STABLE AS $$
   SELECT id FROM public.structured_idea AS si
   JOIN public.topic USING(id)
-  WHERE ARRAY[target_id] && refs AND schema_in_type_terms(topic.schema_def_id, structure_terms)
+  WHERE ARRAY[target_id] && refs AND schema_in_type_terms(topic.schema_term_id, structure_terms)
   UNION ALL SELECT id FROM public.claim_link AS cl
   JOIN public.topic USING(id)
-  WHERE (target_id = cl.source OR target_id = cl.target) AND schema_in_type_terms(topic.schema_def_id, structure_terms);
+  WHERE (target_id = cl.source OR target_id = cl.target) AND schema_in_type_terms(topic.schema_term_id, structure_terms);
 $$;
 
 

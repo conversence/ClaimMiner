@@ -18,8 +18,9 @@ from sqlalchemy.sql.functions import count
 from pydantic import Field, create_model, ConfigDict
 
 from . import Session
-from .models import NamespaceDef, SchemaDef, model_by_topic_type, Base, Topic, aliased
-from .pyd_models import TopicModel, SchemaDefModel, topic_type, pyd_model_by_topic_type, HK
+from .models import NamespaceDef, Ontology, SchemaTerm, model_by_topic_type, Base, Topic, aliased
+from .pyd_models import TopicModel, SchemaTermModel, topic_type, pyd_model_by_topic_type, HK
+from .linkml_pydantic import PydanticModelGenerator
 
 scalar_field_types: Dict[URIRef, Type] = {
     XSD.anyURI: URIRef,
@@ -74,19 +75,20 @@ class DynamicBaseSchema(TopicModel):
     # collections_id: Optional[List[int]] = None   # TODO
     # collections: Optional[List[CollectionModel]]
 
-class Ontology():
-    ontology: Ontology
+class OntologyRegistry():
+    registry: OntologyRegistry
 
     def __init__(self):
-        assert not getattr(self.__class__, 'ontology', None), "Do not declare twice"
-        self.__class__.ontology = self
+        assert not getattr(self.__class__, 'registry', None), "Do not declare twice"
+        self.__class__.registry = self
         self.prefixes: Dict[str, Namespace] = {}
-        self.terms: Dict[URIRef, SchemaDef] = {}
-        self.schema_by_curie: Dict[str, SchemaDef] = {}
-        self.term_models: Dict[URIRef, Type[SchemaDefModel]] = {}
+        self.ontologies_by_prefix: Dict[str, Ontology] = {}
+        self.terms: Dict[URIRef, SchemaTerm] = {}
+        self.schema_by_curie: Dict[str, SchemaTerm] = {}
+        self.term_models: Dict[URIRef, Type[SchemaTermModel]] = {}
         self.descendants: Dict[URIRef, Set[int]] = defaultdict(set)
         self.term_types: Dict[URIRef, topic_type] = {}
-        self.schemas_by_id: Dict[int, SchemaDef] = {}
+        self.schemas_by_id: Dict[int, SchemaTerm] = {}
 
     def read_ontology(self, fname: Path) -> Dict:
         with open(fname) as f:
@@ -94,13 +96,13 @@ class Ontology():
         return self.onto_data
 
     @classmethod
-    async def ensure_onto(cls, load_file=False, schema_file:str='schemas/core.yaml', delete_others:bool=False) -> Ontology:
-        ontology = Ontology()
+    async def ensure_onto(cls, load_file=False, schema_file:str='schemas/core.linkml.yaml', delete_others:bool=False) -> OntologyRegistry:
+        registry = OntologyRegistry()
         if not load_file:
-            load_file = not await ontology.load_onto_from_db()
+            load_file = not await registry.load_onto_from_db()
         if load_file:
-            await ontology.load_onto_from_file(Path(schema_file), delete_others)
-        return ontology
+            await registry.load_onto_from_file(Path(schema_file), delete_others)
+        return registry
 
     async def load_onto_from_db(self):
         async with Session() as session:
@@ -114,13 +116,13 @@ class Ontology():
             self.base_prefix = base[0].prefix
             self.base = self.prefixes[self.base_prefix]
 
-            r = await session.execute(select(SchemaDef))
+            r = await session.execute(select(SchemaTerm))
             self.schemas_by_id = {s.id: s for (s,) in r}
             if not self.schemas_by_id:
                 return False
-            for schema_def in self.schemas_by_id.values():
-                if schema_def.parent_id:
-                    schema_def.parent = self.schemas_by_id[schema_def.parent_id]
+            for schema_term in self.schemas_by_id.values():
+                if schema_term.parent_id:
+                    schema_term.parent = self.schemas_by_id[schema_term.parent_id]
             self.schema_by_curie = {s.prefix: s for s in self.schemas_by_id.values()}
             self.terms = {s.full_term: s for s in self.schemas_by_id.values()}
             self.generate_models()  # as a sanity check
@@ -154,14 +156,14 @@ class Ontology():
             await self.ensure_subclasses(session, onto_data['types'], namespace_defs)
             self.generate_models()  # as a sanity check
             self.calc_descendants()
-            SchemaDefA = aliased(SchemaDef, flat=True)
-            all_terms = await session.execute(select(SchemaDefA.term, count(Topic.id)).outerjoin(Topic, Topic.schema_def_id==SchemaDefA.id).group_by(SchemaDefA.term))
+            SchemaTermA = aliased(SchemaTerm, flat=True)
+            all_terms = await session.execute(select(SchemaTermA.term, count(Topic.id)).outerjoin(Topic, Topic.schema_term_id==SchemaTermA.id).group_by(SchemaTermA.term))
             all_terms = {URIRef(t): n for (t, n) in all_terms}
             if others := set(all_terms) - set(self.terms):
-                print ("Database terms missing in the ontology:\n", "\n".join(others))
+                print ("Database terms missing in the ontologies:\n", "\n".join(others))
                 if delete_others:
                     if others_empty := [o for o in others if not all_terms[o]]:
-                        await session.execute(delete(SchemaDef).where(SchemaDef.term.in_(list(others_empty))))
+                        await session.execute(delete(SchemaTerm).where(SchemaTerm.term.in_(list(others_empty))))
                         print(f"Deleted {len(others_empty)} terms")
                     if others_used := [o for o in others if all_terms[o]]:
                         print("Did not delete those terms, which are used: \n", "\n".join(others_used))
@@ -192,7 +194,7 @@ class Ontology():
                 return ns[end], f"{prefix}:{end}"
         return URIRef(term_or_curie), None
 
-    async def ensure_subclasses(self, session, classes, namespace_defs: Mapping[str, NamespaceDef], parent: Optional[SchemaDef]=None):
+    async def ensure_subclasses(self, session, classes, namespace_defs: Mapping[str, NamespaceDef], parent: Optional[SchemaTerm]=None):
         for sclass, info in classes.items():
             info = info or {}
             term, curie = self.as_term_and_curie(sclass)
@@ -202,12 +204,12 @@ class Ontology():
             assert curie
             assert curie not in self.schema_by_curie, f"Repeated curie: {curie}"
             subclasses = info.pop('subClasses', {})
-            term_db = await session.scalar(select(SchemaDef).filter_by(term=short_term, prefix=prefix))
+            term_db = await session.scalar(select(SchemaTerm).filter_by(term=short_term).join(SchemaTerm.ontology).filter_by(prefix=prefix))
             if term_db:
                 term_db.parent = parent
                 term_db.data = info
             else:
-                term_db = SchemaDef(term=short_term, prefix=prefix, data=info, parent=parent, namespace=namespace_defs[prefix])
+                term_db = SchemaTerm(term=short_term, prefix=prefix, data=info, parent=parent, namespace=namespace_defs[prefix])
                 session.add(term_db)
             self.terms[term] = term_db
             self.schema_by_curie[curie] = term_db
@@ -245,12 +247,12 @@ class Ontology():
                 return model
         return Topic
 
-    def generate_model(self, db_model: SchemaDef) -> Type[SchemaDefModel]:
+    def generate_model(self, db_model: SchemaTerm) -> Type[SchemaTermModel]:
         schema = db_model.data
         curie = db_model.curie
         classname = self.model_classname(db_model.term, db_model.prefix)
-        attributes = dict(schema_def_term=(Literal[curie], Field(curie)))
-        parent: Type[SchemaDefModel] = DynamicBaseSchema
+        attributes = dict(schema_term_term=(Literal[curie], Field(curie)))
+        parent: Type[SchemaTermModel] = DynamicBaseSchema
         if db_model.parent_id:
             parent = self.term_models[db_model.parent.full_term]
         for att_name, info in schema.get('attributes', {}).items():
@@ -342,7 +344,7 @@ class Ontology():
         return Union[tuple(v for v in self.term_models.values() if not subclasses_of or issubclass(v, subclasses_of))]
 
     def as_field_type(self, *subclasses_of: List[str]):
-        return Field(self.as_union_type(subclasses_of), discriminator='schema_def_term')
+        return Field(self.as_union_type(subclasses_of), discriminator='schema_term_term')
 
     def calc_descendants(self):
         for term, db_model in self.terms.items():
@@ -357,11 +359,11 @@ class Ontology():
     def subtype_constraints(self, query, entity: Type[Topic], term: URIRef, exact=False):
         query = query.filter(entity.type == self.term_types[term])
         if exact:
-            query = query.filter(entity.schema_def_id == self.term_models[term].id)
+            query = query.filter(entity.schema_term_id == self.term_models[term].id)
         else:
             descendents = self.descendants[term]
             if len(descendents) > 1:
-                query = query.filter(entity.schema_def_id.in_(list(descendents)))
+                query = query.filter(entity.schema_term_id.in_(list(descendents)))
         return query
 
     def subtype_constraints_multiple(self, query, entity: Type[Topic], terms: List[URIRef], exact=False):
@@ -375,7 +377,7 @@ class Ontology():
         else:
             schema_ids = set(chain(*(self.descendants[term] for term in terms)))
         if len(schema_ids) > 1:
-            query = query.filter(entity.schema_def_id.in_(list(schema_ids)))
+            query = query.filter(entity.schema_term_id.in_(list(schema_ids)))
         return query
 
 if __name__ == '__main__':
@@ -386,4 +388,4 @@ if __name__ == '__main__':
     parser.add_argument('--schema', type=Path, default='schemas/core.yaml')
     parser.add_argument('--delete-others', default=False, action='store_true')
     args = parser.parse_args()
-    run(Ontology.ensure_onto(args.load_file, args.schema, args.delete_others))
+    run(OntologyRegistry.ensure_onto(args.load_file, args.schema, args.delete_others))

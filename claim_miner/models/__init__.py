@@ -133,7 +133,8 @@ from .collections import (
 from .base import globalScope
 from .structures import (
     NamespaceDef,
-    SchemaDef,
+    Ontology,
+    SchemaTerm,
     StructuredIdea,
 )
 from .tasks import (
@@ -184,7 +185,7 @@ model_by_topic_type: Dict[topic_type, Type[Base]] = {
     topic_type.fragment: Fragment,
     topic_type.hyperedge: HyperEdge,
     topic_type.link: ClaimLink,
-    topic_type.schema_def: SchemaDef,
+    topic_type.schema_term: SchemaTerm,
     topic_type.structured_idea: StructuredIdea,
 }
 
@@ -207,7 +208,7 @@ async def delete_data(session, include_onto=False):
         await session.execute(delete(Topic.__table__).where(Topic.__table__.c.type != topic_type.analyzer))
         await session.execute(NamespaceDef)
     else:
-        await session.execute(delete(Topic.__table__).where(Topic.__table__.c.type.not_in(topic_type.schema_def, topic_type.analyzer)))
+        await session.execute(delete(Topic.__table__).where(Topic.__table__.c.type.not_in(topic_type.schema_term, topic_type.analyzer)))
     await session.execute(delete(UriEquiv))
     await session.execute(delete(Collection))
 
@@ -230,7 +231,8 @@ __all__ = [
     "InClusterData",
     "PolyTopic",
     "PolyTopicType",
-    "SchemaDef",
+    "Ontology",
+    "SchemaTerm",
     "Statement",
     "StatementAlone",
     "StatementOrFragment",
