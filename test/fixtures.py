@@ -357,3 +357,8 @@ async def many_claims(models, session_maker, registry, collection):
             )
         )
         await session.commit()
+
+@pytest.fixture(scope="module")
+async def linkml_ontology():
+    from claim_miner.linkml_pydantic import PydanticModelGenerator
+    return PydanticModelGenerator.from_file('schemas/core.linkml.yaml')
