@@ -1,5 +1,6 @@
-from copy import deepcopy
+from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field as dcfield
 from typing import List, Optional, Dict, Type, Union, Generator, Tuple, Set, Any, ForwardRef
 from types import new_class
@@ -23,7 +24,7 @@ from rdflib import URIRef
 
 from .pydantic_adapters import PydanticURIRef
 from .pyd_models import ontology_status
-from .base_onto import BaseOntologyRegistry, OntologyData, OntologyClassData, OntologyHandler
+from .base_onto import BaseOntologyRegistry, BaseOntologyData, OntologyClassData, OntologyHandler
 
 DEBUG = True
 if DEBUG:
@@ -110,20 +111,40 @@ class field_type(Enum):
     object = 3
 
 class LinkMLOntologyHandler(OntologyHandler):
-    ontology_language = 'linkml'
-    def prepare(self, data):
-        registry = None  # TODO: Inject.
-        generator = PydanticModelGenerator(data, ontology_registry=registry)
+
+    handler: LinkMLOntologyHandler = None  # Singleton
+
+    @classmethod
+    def instantiate(cls, registry: BaseOntologyRegistry) -> LinkMLOntologyHandler:
+        assert not cls.handler, "Singleton"
+        h = LinkMLOntologyHandler(ontology_language='linkml')
+        cls.handler = h
+        registry.register_handler(h)
+        return h
+
+
+    def from_file(self, fname) -> BaseOntologyData:
+        from linkml_runtime.utils.schemaview import load_schema_wrap
+        schema = load_schema_wrap(fname)
+        return self.from_linkml_schema(schema)
+
+    def from_db_schema(self, db_schema) -> BaseOntologyData:
+        pass  # TODO
+
+    def from_linkml_schema(self, schema: SchemaDefinition) -> BaseOntologyData:
+        generator = PydanticModelGenerator(schema=schema)
         generator.serialize()
         return generator.ontology_data
 
 @dataclass
-class LinkMLOntologyData(OntologyData):
+class LinkMLOntologyData(BaseOntologyData):
     registry: BaseOntologyRegistry = dcfield(default=None)
     schema: SchemaDefinition = dcfield(default=None)
-    ontology_language = 'linkml'
 
     def as_context(self):
+        pass  # TODO
+
+    def get_pydantic_schema(self, short_term: str) -> BaseModel:
         pass  # TODO
 
 @dataclass
@@ -219,13 +240,14 @@ class PydanticModelGenerator(LMGenerator):
         for cinfo in self.class_data.values():
             cinfo.pydantic_cls.model_rebuild()
         self.ontology_data = LinkMLOntologyData(
-            'linkml',
+            ontology_language='linkml',
             base_prefix=self.schema.default_prefix,
             prefixes={k: URIRef(v) for (k, v) in self.schema.prefixes.items()},
             classes=self.class_data,
             # enums and types TODO
             status = ontology_status.draft, # TODO
-            schema = self.schema
+            registry = self.ontology_registry,
+            schema = self.schema,
         )
 
 
@@ -519,6 +541,8 @@ class PydanticModelGenerator(LMGenerator):
 
 if __name__ == "__main__":
     import sys
-    g = PydanticModelGenerator.from_file(sys.argv[1])
-    print(g.class_data)
+    reg = BaseOntologyRegistry.instantiate()
+    LinkMLOntologyHandler.instantiate(reg)
+    g = reg.from_file(sys.argv[1])
+    print(g)
     # pdb.set_trace()
